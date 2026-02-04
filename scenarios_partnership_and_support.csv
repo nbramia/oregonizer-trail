@@ -1,0 +1,131 @@
+name,mode,type,text,yes_staff_retention,yes_partner_retention,yes_partner_growth,yes_tech_debt,yes_revenue,yes_net_votes,no_staff_retention,no_partner_retention,no_partner_growth,no_tech_debt,no_revenue,no_net_votes,yes_response,no_response,info_staff_retention,info_partner_retention,info_partner_growth,info_tech_debt,info_revenue,info_net_votes
+support_priority_conflict,Partnership & Support,decision,"A key account has a new priority support request. 
+
+Prioritize it over longer-standing requests from less critical accounts?",,15,-20,,,,,-20,10,,,,"Prioritized support for key account.
+
+Partner retention increased slightly.
+
+Partner growth decreased slightly.","Did not prioritize key account support.
+
+Partner retention decreased.
+
+Partner growth increased slightly.",,,,,,
+feature_request_vs_bug_fix,Partnership & Support,decision,"You've identified a number of important bugs in the platform.
+
+Push the development team to prioritize these bugs over the new feature you've been asking for?",,15,-15,15,,,,-15,15,-15,,,"Prioritized bug fixes over the new feature.
+
+Partner growth decreased.
+
+Partner retention and tech debt improved.","Prioritized the new feature over bug fixes.
+
+Partner growth increased.
+
+Partner retention and tech debt slightly suffered.",,,,,,
+customer_training_request,Partnership & Support,decision,"An existing account requests a series of trainings for their new employees, outside the scope of the partnership agreement.
+
+Provide the trainings over other team priorities?",-15,20,-15,,,,15,-20,15,,,,"Provided customer trainings.
+
+Partner retention increased.
+
+Staff retention and partner growth slightly decreased.","Did not provide customer trainings.
+
+Partner retention decreased.
+
+Staff retention and partner growth slightly increased.",,,,,,
+high_priority_bug,Partnership & Support,decision,"A new bug is stopping a partner from using a key area of the platform.
+
+Ask the team to work over the weekend to help them with a workaround?",-20,10,,,,,10,-20,,,,,"A few team members worked through the weekend.
+
+Staff retention decreased.
+
+Partner retention slightly increased.","The partner's program had to be delayed.
+
+Staff retention slightly increased.
+
+Partner retention decreased.",,,,,,
+customization_request,Partnership & Support,decision,"A partner requested a custom tweak to a feature, specific to their use case.
+
+Ask the development team to prioritize it?",,10,-15,-25,,,,-10,10,10,,,"Prioritized partner-specific change.
+
+Partner retention slightly increased.
+
+Tech debt suffered.
+
+Partner growth slightly decreased.","Did not prioritize partner-specific change.
+
+Partner retention slightly decreased.
+
+Tech debt slightly improved.
+
+Partner growth slightly increased.",,,,,,
+support_team_workload,Partnership & Support,decision,"The team is struggling to keep up with the volume of support issues and requests.
+
+Ask the development team to prioritize stability and robustness over new features?",20,10,-15,,,,-20,-10,10,,,,"Support demand decreased as a result of the focus on stability.
+
+Staff retention increased, and partner retention slightly increased.
+
+Partner growth slightly decreased.","Support demand continued to increase.
+
+Staff retention decreased, and partner retention slightly decreased.
+
+Partner growth slightly increased.",,,,,,
+renewal_discount_request,Partnership & Support,decision,"A current partner is requesting a significant renewal discount.
+
+Provide the discount?",-20,10,,,,,20,-10,,,,,"Provided renewal discount; the budget no longer supports hiring a new team member.
+
+Staff retention decreased.
+
+Partner retention slightly increased.","Did not provide renewal discount; the budget supports hiring a new team member.
+
+Staff retention increased.
+
+Partner retention slightly decreased.",,,,,,
+customer_feedback_incorporation,Partnership & Support,decision,"Current partners are requesting very different features than potential new partners.
+
+Prioritize the feedback and input of current customers over those of potential new partners?",,20,-15,,,,,-20,10,,,,"Prioritized the input of current partners over that of potential new partners.
+
+Partner retention increased.
+
+Partner growth slightly decreased.","Prioritized the input of potential new partners over that of current partners.
+
+Partner retention decreased.
+
+Partner growth slightly increased.",,,,,,
+support_request_surge,Partnership & Support,decision,"Support requests are surging.
+
+Take a step back to improve processes and systems, at the expense of responsiveness to current requests?",25,-20,,,,,-15,15,,,,,"Took a step back and focused on process.
+
+Staff retention increased.
+
+Partner retention decreased.","Prioritized responsiveness to current requests.
+
+Staff retention slightly decreased.
+
+Partner retention slightly increased.",,,,,,
+major_outage,Partnership & Support,informational,"There was a major outage.
+
+Partner retention decreased.",,,,,,,,,,,,,,,,-20,,,,
+key_customer_churn,Partnership & Support,informational,"A key customer – one tightly aligned with our organization's identity and mission – decided not to renew their contract.
+
+Partner retention slightly decreased and staff retention decreased.",,,,,,,,,,,,,,,-10,-15,,,,
+unexpected_uptime,Partnership & Support,informational,"The platform has had a prolonged period of 100% uptime.
+
+Partner retention slightly increased.",,,,,,,,,,,,,,,,15,,,,
+high_support_rating,Partnership & Support,informational,"Your support team is getting great feedback from partners.
+
+Partner retention increased, and that reputation drove an increase in partner growth.",,,,,,,,,,,,,,,,15,10,,,
+renewal_rush,Partnership & Support,informational,"A large number of partners' contracts are up for renewal, and the team has been underwater.
+
+Staff retention decreased.",,,,,,,,,,,,,,,-15,,,,,
+negative_feedback,Partnership & Support,informational,"A key customer spoke publicly about a bad experience with the platform.
+
+Partner retention and growth decreased.",,,,,,,,,,,,,,,,-10,-20,,,
+positive_testimonial,Partnership & Support,informational,"A partner gave us a strong testimonial to feature on the website.
+
+Partner growth increased.",,,,,,,,,,,,,,,,,10,,,
+new_competitor,Partnership & Support,informational,"Another organization has entered the market.
+
+Partner retention and growth decreased.",,,,,,,,,,,,,,,,-10,-15,,,
+unexpected_budget_increase,Partnership & Support,informational,"You received an unexpected budget increase and were able to hire staff to do new account development.
+
+Partner growth increased.",,,,,,,,,,,,,,,,,10,,,

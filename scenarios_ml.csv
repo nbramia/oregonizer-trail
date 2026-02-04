@@ -1,0 +1,455 @@
+name,mode,type,text,yes_staff_retention,yes_partner_retention,yes_partner_growth,yes_tech_debt,yes_revenue,yes_net_votes,no_staff_retention,no_partner_retention,no_partner_growth,no_tech_debt,no_revenue,no_net_votes,yes_response,no_response,info_staff_retention,info_partner_retention,info_partner_growth,info_tech_debt,info_revenue,info_net_votes
+positive_result_uncertain,Movement Labs,decision,"Experimental results were positive, but there's a 30% chance the positive effect was due to random chance. 
+
+Bring the result to a funder and scale it up?",-10,,,,20,,15,,,,-15,-15,"Scaled it up. It didn't work.
+
+Revenue increased.
+
+Staff retention slightly decreased.","Didn't scale it up. We'll never know!
+
+Lost out on the revenue and net vote potential.
+
+Staff retention slightly increased.",,,,,,
+idea_untested_scale,Movement Labs,decision,"We've had great idea that we think should net votes. 
+
+There's no time to test it. Run it at scale?",-15,,,,,-20,,,,15,,,"Yikes. Program backlashed.
+
+Staff retention decreased. 
+
+Net votes decreased.","Didn't run the program. We'll never know. 
+
+Caught up on some tech debt.",,,,,,
+scale_test_idea,Movement Labs,decision,"At the all staff retreat, someone had an idea that seems like it should net votes but there isn't a good way to test it at low scale. 
+
+Run it at full scale?",20,,,,,20,-15,,,-15,,,"Nice, it worked! 
+
+Net votes increased. 
+
+Staff retention increased.","Didn't run the program. We'll never know. 
+
+Staff retention slightly decreased.
+
+Caught up on some tech debt.",,,,,,
+weekend_work_dilemma,Movement Labs,decision,"A sale came through at the last minute, from a new client been trying to land for years. It'd require work over the weekend from three people, one of whom was working last weekend, too. 
+
+Tell the client we can do it?",-25,,,,10,10,20,,,,-15,-15,"They worked over the weekend. 
+
+Staff retention decreased.
+
+Net votes and revenue slightly increased.","Declined the sale. 
+
+Revenue and net votes slightly decreased.
+
+Staff retention increased.",,,,,,
+delay_program,Movement Labs,decision,"Our Spoke integration has crashed on a Friday evening, with programs set to launch the next morning. 
+
+Delay the programs and work on the issues on Monday?",20,,,,-35,-15,-20,,,,20,15,"Delayed the program. A funder is MAD.
+
+Staff retention increased. 
+
+Revenue sharply decreased.","Staff worked over the weekend. 
+
+Staff retention decreased.
+
+The funder sent their friends our way; revenue increased.",,,,,,
+low_revenue_high_votes,Movement Labs,decision,"A program wouldn't generate much revenue but should be very effective at netting votes. It's super involved – we'd probably lose money after accounting for staff time. 
+
+Run the program?",-10,,,-15,,20,,,,20,,-20,"Ran the program. 
+
+Net votes increased, but so did tech debt.
+
+Staff retention slightly decreased.","Didn't run the program. 
+
+Net votes decreased. 
+
+Caught up on some tech debt.",,,,,,
+high_revenue_low_votes,Movement Labs,decision,"There's a program that could generate a lot of revenue but which we don't believe will net votes (the funder just believes in it). 
+
+It'd be pretty simple to execute. Run it?",,,,,20,,,,,,-20,20,"Ran the program.
+
+Revenue increased. 
+
+Not much else changed.","Didn't run the program. 
+
+Revenue decreased. 
+
+Focused effort on something that did net votes.",,,,,,
+retest_backlash_program,Movement Labs,decision,"We ran a program in 2024 that we think probably backlashed (generating votes for Republicans). A funder thinks that was a fluke and wants to test it again in a special election. 
+
+Re-test it?",,,,,20,10,15,,,,-20,,"Re-tested it. 
+
+Turns out, funder was right; seems like the program netted some votes this time.
+
+Revenue increased, net votes slightly increased.","Didn't re-test. 
+
+Funder is less likely to work with us in the future. 
+
+Staff retention increased.",,,,,,
+prioritize_manual_QC,Movement Labs,decision,"An especially complex campaign is going out tomorrow. 
+
+Prioritize a second round of manual QC on the list for tomorrow's program over progress automating QC checks for future programs?",-15,,,-20,,,15,,,25,,,"Prioritized manual QC. 
+
+Didn't catch any new errors. 
+
+Staff retention slightly decreased.","Skipped the manual QC. Things went fine. 
+
+Staff retention increased. 
+
+Tech debt decreased.",,,,,,
+prioritize_redo_QC,Movement Labs,decision,"You recently caught a big issue with an important program. You think you've fixed it, though!
+
+Prioritize a re-do on that program's QC over automating QC checks for future programs?",10,,,-15,,10,-15,,,20,,-15,"Re-did the QC. 
+
+Caught a big issue before it went out.
+
+Staff retention, net votes, and tech debt slightly increased.","Skipped the manual QC. Program ran into a major issue.
+
+Staff retention decreased. Net votes decreased.
+
+Tech debt decreased.",,,,,,
+tech_debt_or_votes,Movement Labs,decision,"The team can either make progress on tech debt or divert themselves to execute a program that will likely net votes but won't generate much revenue. 
+
+Run the program?",,,,-20,10,20,,,,20,,-15,"Ran the program. 
+
+Net votes increased, but so did tech debt.
+
+Revenue slightly increased.","Didn't run the program. 
+
+Caught up on tech debt; net votes decreased.",,,,,,
+hacky_leadership_idea,Movement Labs,decision,"Company leadership has an idea with high potential impact that would require hacking something together to get it out in time. You could also push to do it the right way and be ready for the next election, but miss this window. 
+
+Hack it together and run the program?",-20,,,-30,,20,10,,,15,,,"The system didn't work as expected and 6 people ended up having to drop everything to get it out the door.
+
+Net votes increased – but so did tech debt. 
+
+Staff retention decreased.","We'll never know. 
+
+Staff retention slightly increased.
+
+Tech debt slightly decreased.",,,,,,
+hacky_funder_idea,Movement Labs,decision,"A funder has an idea they'd generously fund, but it would require hacking something together to get it out in time. 
+
+Divert the team from the project they've been working on so they can hack this together?",-15,,,-30,20,20,10,,,,-30,,"The program went off without a hitch.
+
+Net votes and revenue increased – but so did tech debt. 
+
+Staff retention slightly decreased.","The funder is annoyed; told their friends not to bother coming to us with ideas, either.
+
+Revenue decreased. 
+
+Staff retention slightly increased.
+",,,,,,
+system_or_feature,Movement Labs,decision,"We could prioritize making a key system more reliable and robust, or adding a new feature to Launchpad that users have been asking for. 
+
+Prioritize the new feature?",,,,-20,10,15,15,,,20,,,"Prioritized the new feature, which let us run a program we couldn't have otherwise run.
+
+Tech debt increased.
+
+Net votes increased.","Prioritized system reliability. 
+
+Staff retention increased. 
+
+Tech debt decreased.",,,,,,
+prioritize_texting_feature,Movement Labs,decision,"A state party made a request for a CER texting Portal feature on short notice. 
+
+Prioritize it?",-10,,,-10,,15,,,,15,,-15,"Prioritized feature. 
+
+Net votes and tech debt slightly increased. 
+
+Staff retention slightly decreased.","Did not prioritize feature. 
+
+Tech debt decreased.
+
+Net votes decreased.",,,,,,
+prioritize_diagnostics_support,Movement Labs,decision,"Support requests for the CER Portal are taking too long to resolve. 
+
+Prioritize changes that would make it easier to diagnose and address issues?",10,,,20,-15,-10,-15,,,-15,15,15,"Prioritized tech debt.
+
+Didn't have enough capacity to execute on an additional program.
+
+Staff retention slightly increased.
+
+Net votes and revenue slightly decreased.","Didn't prioritize tech debt. 
+
+Focused effort on a new program that increased revenue and net votes. 
+
+Staff retention slightly decreased.",,,,,,
+election_rest_recover,Movement Labs,decision,"That was a tough election! 
+
+Do you want your team to rest and recover, instead of immediately pushing forward?",30,,,,-10,,-30,,,,10,,"Your team rested and regained their energy.
+
+Revenue slightly decreased.","Pushed forward!
+
+Staff retention decreased, revenue slightly increased.",,,,,,
+prioritize_backend_improvements,Movement Labs,decision,"Texting throughput is degraded. 
+
+Prioritize back-end improvements over new features?",10,,,25,-15,,-10,,,-30,15,15,"Prioritized tech debt. 
+
+Lost out on some revenue.
+
+Staff retention increased slightly.","Prioritized new features. 
+
+Ran an extra program that netted votes and revenue. 
+
+Tech debt spiraled. Staff retention slightly decreased.",,,,,,
+wrong_polling_place,Movement Labs,decision,"We got a verified report that we texted someone the wrong polling place. Unclear how widespread the issue is. 
+
+Send a correction text to all 1M recipients immediately?",,,,,-25,,,,,,,,"Turns out the problem only affected 0.1% of the list. 
+
+A reporter got the correction text and wrote a story. 
+
+Lost revenue.",Nothing really happened; no additional reports were filed.,,,,,,
+wrong_election_date,Movement Labs,decision,"We texted the wrong election day to 250k people. 
+
+Send a correction text to all 250k recipients immediately?",,,,,-10,,-10,,,,-15,-15,"Sent the correction. 
+
+Revenue slightly decreased, but net votes held steady.","Didn't send a correction. 
+
+The DNC is angry. 
+
+Revenue decreased, staff retention decreased, net votes decreased.",,,,,,
+program_success_increased,Movement Labs,informational,"A program was way more successful than expected! 
+
+Net votes and revenue increased.",,,,,,,,,,,,,,,,,,,15,20
+google_cloud_outage,Movement Labs,informational,"Google Cloud outage - the platform went down for 24h. We lost a program and hurt our relationship with a big client. 
+
+Net votes and revenue decreased.",,,,,,,,,,,,,,,,,,,-20,-15
+vendor_data_change,Movement Labs,informational,"A key vendor changed their data structure without notice, generating a laundry list of required backend changes. 
+
+Tech debt climbed.",,,,,,,,,,,,,,,,,,-20,,
+system_failures_abandonment,Movement Labs,informational,"A CER grantee tried to load a broken list (and we didn't have the right safeguards); Portal went down at a key moment. 
+
+A few county parties abandoned the program; we expect to net fewer votes. 
+
+Tech debt is higher than we realized.",,,,,,,,,,,,,,,,,,-15,,-15
+hire_improved_metrics,Movement Labs,informational,"That new hire is AMAZING. Staff retention increased, and tech debt slightly improved.",,,,,,,,,,,,,,,20,,,15,,
+missed_deadline_revenue,Movement Labs,informational,"We missed a deadline we'd promised a client. 
+
+Revenue slightly decreased.",,,,,,,,,,,,,,,,,,,-15,
+press_article_negativity,Movement Labs,informational,"Ouch, that was a rough article in the press. Revenue decreased; net votes and staff retention slightly decreased.",,,,,,,,,,,,,,,-10,,,,-20,-10
+positive_performance_gains,Movement Labs,informational,"Wow! Great coverage in a major newspaper. 
+
+Revenue increased; net votes and staff retention slightly improved.",,,,,,,,,,,,,,,10,,,,20,10
+service_break_retention,Movement Labs,informational,"A key service breaks and requires half a dozen people working all weekend to get it back on the rails. 
+
+Staff retention decreased.",,,,,,,,,,,,,,,-20,,,,,
+funder_data_request,Movement Labs,decision,"A funder wants detailed individual-level data on text replies. Our data sharing agreement technically allows it, but it feels ethically gray.
+
+Share the data?",-15,,,,20,,15,,,,5,,"Shared the data.
+
+Staff retention decreased.
+
+Revenue increased","Declined to share.
+
+Funder accepted our reasoning.
+
+Staff retention increased.",,,,,,
+client_override_targeting,Movement Labs,decision,"A funder wants us to prioritize their target districts over our own targets for a major program. We think they're wrong.
+
+Use their targets?",-10,,,,,-15,5,,,,-15,20,"Followed their guidance.
+
+Net votes decreased.
+
+Revenue slightly increased.","Pushed back and used our own targets.
+
+Net votes increased.
+
+Funder still things theirs would have performed better; revenue decreased.",,,,,,
+late_payment_client,Movement Labs,decision,"A small but loyal client is three months behind on payment. They're going through a tough cycle.
+
+Keep working with them?",10,,,,-20,10,-15,,,,0,-10,"Kept working with them.
+
+Revenue decreased; they never paid us.
+
+Staff retention and net votes slightly increased.","Paused work until payment.
+
+We developed a reputation as profit-driven over impact-driven.
+
+Staff retention and net votes slightly decreased. Revenue held steady.",,,,,,
+funder_press_release,Movement Labs,decision,"A funder wants a press release about a program we ran together. The data team thinks the claims would be overstated.
+
+Approve the press release?",-15,,,,,,15,,,,5,,"Approved the press release.
+
+Funder was thrilled; revenue increased. Our reputation with industry insiders dropped; revenue decreased.
+
+Staff retention decreased.","Pushed back on the claims.
+
+Funder accepted a toned-down version.
+
+Staff retention increased.",,,,,,
+whale_custom_demo,Movement Labs,decision,"An major donor prospect wants a custom demo that would take 40 hours to build. If we do it, 25% chance of landing $500k in revenue.
+
+Build the demo?",-20,,,,25,15,15,,,15,-10,,"Built the demo. They signed!
+
+Revenue increased significantly.
+
+Team is exhausted.","Declined the custom demo.
+
+Lost the prospect.
+
+Tech debt decreased, staff retention increased.",,,,,,
+mid_cycle_volume_increase,Movement Labs,decision,"A client wants to add texting volume mid-cycle beyond what we scoped. We can technically do it but the team is already stretched.
+
+Take the additional volume?",-25,,,-10,15,15,15,,,10,-10,-10,"Took the volume.
+
+Staff worked overtime; retention suffered.
+
+Revenue, net votes, and tech debt increased.","Declined the additional volume.
+
+Client was disappointed but understood.
+
+Staff retention increased.",,,,,,
+engineer_side_project,Movement Labs,decision,"Someone wants to work on an interesting but non-critical project that would help their career growth. It would pull them off tech debt work for two weeks.
+
+Support it?",20,,,-15,-5,,-15,,,15,5,,"Green-lit the side project.
+
+Staff retention increased.
+
+Tech debt increased.","Kept them on tech debt work.
+
+Staff retention decreased.
+
+Tech debt decreased.",,,,,,
+conference_during_crunch,Movement Labs,decision,"Half of a team wants to attend a conference right before we start to ramp up for the next election.
+
+Approve the conference?",20,,,-5,-10,-15,-15,,,5,15,15,"Approved the conference.
+
+Weren't in position to capitalize on a late-breaking opportunity. Net votes decreased.
+
+Staff came back energized.","Declined the conference.
+
+We ended up able to capitalize on a late-breaking opportunity. Net votes and revenue increased.
+
+Staff retention decreased.",,,,,,
+transfer_request,Movement Labs,decision,"An employee wants to transfer to a team where they'd drive less impact - but be more motivated.
+
+Allow the transfer?",15,,,,,-10,-20,,,,-5,-10,"Allowed the transfer.
+
+Staff retention increased.
+
+Net votes slightly decreased.","Denied the transfer.
+
+They stayed but disengaged.
+
+Productivity declined.",,,,,,
+ship_with_bug,Movement Labs,decision,"You can ship a highly-requested feature with a known edge-case bug that affects 2% of Portal, or delay the launch another week to fix it.
+
+Ship with the bug?",-10,,,-10,-10,10,10,,,,-5,-10,"Shipped with the bug.
+
+A county grantee team lost faith in the platform; long term revenue potential slightly decreased.
+
+Net votes and tech debt both slightly increased.","Delayed to fix.
+
+Clean launch. Lost a week of peak net vote potential.
+
+Staff retention slightly increased.",,,,,,
+after_hours_alert,Movement Labs,decision,"After-hours alerts from a key service are frequent but rarely actionable. You could raise the threshold (fewer alerts) or keep it as is.
+
+Raise the threshold?",15,,,-5,,-20,-15,,,,,10,"Raised the threshold.
+
+Staff retention improved.
+
+Missed one real issue, resulting in a program backlashing / turning out Republicans.
+
+","Kept threshold low.
+
+Frequent interruptions. Staff retention decreased. 
+
+Net votes slightly increased.",,,,,,
+checklist_bureaucracy,Movement Labs,decision,"An incident happened because someone skipped a checklist step. You could add more checklist items and oversight, or just clearly reiterate expectations.
+
+Add more checklist items?",-15,,,-5,,15,20,,,,-10,-5,"Added checklist items.
+
+Avoided an issue; increased net votes.
+
+Staff retention decreased.","Trusted staff to follow existing processes more diligently in the future. 
+
+An error led to slightly decreased revenue.
+
+Staff retention increased.",,,,,,
+process_overhead,Movement Labs,decision,"A new process would reduce errors but add 30 minutes to every program launch.
+
+Implement the process?",-15,,,,15,5,15,,,,-15,-5,"Implemented the process.
+
+Errors dropped. Revenue increased.
+
+Staff retention decreased.","Didn't implement the process.
+
+Errors resulted in slightly decreased revenue.
+
+Staff retention increased.",,,,,,
+hacky_vs_proper_integration,Movement Labs,decision,"You could build a hacky integration that works for one client, or build a more robust solution that takes 3x longer but can be used for a range of future clients.
+
+Build the hacky version?",-5,,,-20,10,,10,,,20,-10,-10,"Built the hacky version.
+
+Revenue slightly increased.
+
+This is going to be a nightmare to maintain. Tech debt increased.","Built it properly.
+
+Revenue and net votes slightly decreased (opportunity cost of time).
+
+Tech debt decreased; staff retention increased.",,,,,,
+one_large_vs_three_small,Movement Labs,decision,"You have capacity to run either one large program with high confidence or three small programs with higher uncertainty.
+
+Run the large program?",-5,,,,-15,20,10,,,,20,-15,"Ran the large program. Net votes increased.
+
+Revenue decreased, with fewer fundable new insights and learnings.
+
+Staff retention slightly decreased.","Ran three small programs.
+
+One had a null result, one worked, and one REALLY worked.
+
+Revenue significantly increased (stemming from the new insight/learning). Staff retention increased. Net votes decreased.",,,,,,
+partner_cobrand,Movement Labs,decision,"A partner org wants to co-brand a program. Their involvement would slow you down but expand reach.
+
+Co-brand?",,,,,-20,15,,,,,20,-15,"Co-branded.
+
+Coordination overhead; had to split the revenue.
+
+Net votes increased.","Ran it solo.
+
+Executed it faster and more cleanly, but with lower effect (net votes). 
+
+Revenue increased.",,,,,,
+monitoring_vs_feature,Movement Labs,decision,"You could add logging and monitoring to a system or build a feature users have been asking for.
+
+Build the feature?",5,,,-15,5,5,5,,,20,5,15,"Built the feature. Users are happy.
+
+Tech debt increased.","Added logging and monitoring instead.
+
+Tech debt improved.
+
+Caught an issue early, saving a program and netting votes that would have otherwise been lost.",,,,,,
+field_partner_additions,Movement Labs,decision,"Field partners want to add their own questions to a texting script. It would make the script longer and likely reduce completion rates.
+
+Allow their additions?",-10,,,,15,-15,10,,,,10,20,"Allowed additions.
+
+Revenue increased; net votes decreased.
+
+Staff retention slightly decreased.","Declined additions.
+
+Net votes increased. Partners were annoyed at first, but happy with the results.
+
+Revenue and staff retention slightly increased.",,,,,,
+subgroup_negative_effects,Movement Labs,decision,"A program has good aggregate results but shows negative effects for one demographic subgroup.
+
+Continue the program?",-20,,,,10,10,20,,,,-10,-10,"Continued the program.
+
+Net votes slightly increased. 
+
+Staff retention decreased. Revenue slightly increased.","Stopped the program.
+
+Net votes and revenue slightly decreased.
+
+Staff retention increased.",,,,,,
+documentation_pause,Movement Labs,decision,"An engineer built out some great new functionality – but no one else deeply understands how it works. 
+
+Pause work on new features to ensure robust documentation?",5,,,15,,,-15,,,-20,,-15,"Paused for documentation.
+
+Not much happened; little obvious effect.
+
+Tech debt decreased.","Moved on to the next feature; put off documentation. Tech debt increased.
+
+The engineer left the organization, and now it looks like it'll be as easy to rebuild the functionality as to figure out how it works.
+
+Lost net votes from the opportunity cost of that time and attention.",,,,,,

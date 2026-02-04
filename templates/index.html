@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oregon-izer Trail</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
+    <link rel="manifest" href="/static/site.webmanifest">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="text-center px-4" data-email="{{ email }}">
+
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="text-center border p-4 my-2" style="background-color: var(--phosphor-dark); color: var(--phosphor-green); border: 2px solid var(--phosphor-green); border-radius: 0; max-width: 90%;">
+            <button onclick="window.location.href='/login/google'" class="button py-1 px-4 mt-2 mb-4">Log in with Google</button>
+            <form id="loginForm" method="POST" action="/">
+                <div class="form-group my-2 flex justify-center items-center">
+                    <label for="email" class="w-1/3 text-right pr-4">Email</label>
+                    <input type="text" name="email" class="form-control px-2 text-black" id="email" required style="width: 180px; border-radius: 0; border: 2px solid var(--phosphor-green);" oninput="checkForm()">
+                </div>
+                <div class="form-group flex justify-center items-center">
+                    <label for="password" class="w-1/3 text-right pr-4">Password</label>
+                    <input type="password" name="password" class="form-control px-2 text-black" id="password" required style="width: 180px; border-radius: 0; border: 2px solid var(--phosphor-green);" oninput="checkForm()">
+                </div>
+                <button type="submit" class="inactive py-1 px-4 mt-4 mb-2" id="loginButton">Log in</button>
+            </form>
+        </div>
+    </div>
+<!-- Overlay modal -->
+    <div id="overlay" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="text-center border p-4 my-2 max-w-4/5" style="background-color: var(--phosphor-dark); color: var(--phosphor-green); border: 2px solid var(--phosphor-green); border-radius: 0; max-width: 90%; max-height: 80vh; overflow-y: auto;">
+            <p>You're starting with a healthy organization.</p>
+            <p class="mt-1 mb-3">But tough times and tough decisions are on the way.</p>
+            <p class="mt-1 mb-3">May the odds be ever in your favor.</p>
+            <div class="my-4 custom-select-container">
+                <h2 class="font-bold mb-2">Mode:</h2>
+                <div class="flex justify-center">
+                    <div class="relative inline-block w-3/5">
+                        <select class="custom-select" id="mode_selector_overlay" onchange="setMode(this.value)">
+                            <!-- Options loaded dynamically from mode_config.py -->
+                        </select>
+                        <span class="caret">&#x25BC;</span>
+                    </div>
+                </div>
+            </div>
+            <div class="my-4 custom-select-container">
+                <h2 class="font-bold mb-2">Difficulty:</h2>
+                <div class="flex justify-center">
+                    <div class="relative inline-block w-1/2">
+                        <select class="custom-select" id="difficulty_selector_overlay" onchange="setDifficulty(this.value)">
+                            <option value="Normal">Normal</option>
+                            <option value="Hard">Hard</option>
+                            <option value="Crazy">Crazy</option>
+                        </select>
+                        <span class="caret">&#x25BC;</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-center gap-4">
+                <button class="button py-1 px-4 ok-button" onclick="dismissOverlay()">OK</button>
+                <button class="inactive py-1 px-4" onclick="showInstructions();">More info</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="top" class="flex flex-col items-center md:flex-row md:justify-between w-full px-4 mb-4">
+        <div id="status" class="difficulty-mode-display flex gap-2 mb-2 md:mb-0 py-2 top-element">
+            <div class="current-settings flex flex-col gap-2 mb-2 md:mb-0 py-2 text-left cursor-pointer" onclick="document.getElementById('settings_button').click();">
+                <div><span class="font-bold">Mode:</span> <span id="current_mode"></span></div>
+                <div><span class="font-bold">Difficulty:</span> <span id="current_difficulty"></span></div>
+            </div>
+        </div>
+        <img src="/static/oregonizertrailheader.png" alt="The Oregon-izer Trail" class="mb-2 mt-2 w-full text-center md:w-3/5 mx-auto" style="max-width: 700px; height: auto;">
+        <div class="flex gap-4 top-element">
+            <button class="button py-1 px-4" id="start_button" onclick="startGame()">Start Game</button>
+        </div>
+    </div>
+
+    <div id="welcome_gif" class="cropped-gif mx-auto mt-4 w-11/12 md:w-3/5">
+        <div class="tenor-gif-embed" data-postid="25519465" data-share-method="host" data-aspect-ratio="2.5" data-width="100%">
+            <a href="https://tenor.com/view/welcome-wagon-oregon-trail-gif-25519465">Welcome Wagon GIF</a> from 
+            <a href="https://tenor.com/search/welcome-gifs">Welcome GIFs</a>
+        </div>
+        <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+    </div>
+
+    <div id="metrics" class="text-center mx-auto my-4 mb-4 border py-2 px-4" style="border: 2px solid var(--phosphor-green); border-radius: 0; display: inline-block;">
+        <div class="flex items-center justify-center mb-2">
+            <span class="mr-2">Turn:</span>
+            <span id="turns_survived"></span>
+        </div>
+        <!-- Metric bars will be dynamically generated based on current mode -->
+        <div id="metrics-container"></div>
+    </div>
+
+    <div id="messages" class="text-center mx-auto w-11/12 sm:w-3/5 md:max-w-lg mb-4 border py-2 px-4" style="border: 2px solid var(--phosphor-green); border-radius: 0; display: block; background-color: var(--phosphor-dark); color: var(--phosphor-green);">
+    </div>
+
+    <div class="relative flex justify-center items-center">
+        <div id="scenario" class="relative text-center mx-auto w-11/12 sm:w-3/5 md:max-w-lg mb-4 border py-2 px-4 hidden" style="border: 2px solid var(--phosphor-green); border-radius: 0;">
+            <p id="scenario_text" data-scenario=""></p>
+            <div class="flex justify-center gap-4 mt-4 mb-2">
+                <button class="button py-1 px-4 hidden" id="yes_button" onclick="handleScenario('yes')">Yes</button>
+                <button class="button py-1 px-4 hidden" id="no_button" onclick="handleScenario('no')">No</button>
+            </div>
+        </div>
+    </div>    
+    
+    <button class="button py-1 px-4 hidden mx-auto" id="next_button_scenario" onclick="nextTurn()">Next</button>
+    <button class="button py-1 px-4 hidden mx-auto" id="next_button_messages" onclick="nextTurn()">Next</button>
+
+    <div id="win_gif" class="cropped-gif hidden mx-auto my-4 w-11/12 md:w-3/5">
+        <div class="tenor-gif-embed" data-postid="10805429" data-share-method="host" data-aspect-ratio="1" data-width="100%">
+            <a href="https://tenor.com/view/oregon-trail-gif-10805429">Oregon Trail GIF</a> from 
+            <a href="https://tenor.com/search/oregon+trail-gifs">Oregon Trail GIFs</a>
+        </div>
+    </div>
+
+    <div id="failure_image" class="responsive-image-container hidden mx-auto my-4 w-11/12 md:w-3/5">
+        <img src="https://pyxis.nymag.com/v1/imgs/5ac/476/9cfe7e4017beb1aff13ecea304b77cc7a2-oregon-trail.2x.rhorizontal.w700.jpg" alt="Oregon Trail Failure" class="w-full">
+    </div>
+
+    <div class="fixed bottom-0 right-2">
+        <button id="settings_button" class="bg-transparent border-none">
+            <i class="fas fa-cog  h-12 w-12" style="color: var(--phosphor-green); font-size: 1.4rem;"></i>
+        </button>
+    </div>
+
+    <!-- Settings modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+        <div class="text-center border p-4 my-2 max-w-4/5" style="background-color: var(--phosphor-dark); color: var(--phosphor-green); border: 2px solid var(--phosphor-green); border-radius: 0; max-width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div class="tabs flex flex-wrap justify-center mb-4">
+                <button class="tab-button active" onclick="openTab(event, 'User')">Settings</button>
+                <button class="tab-button" onclick="openTab(event, 'Instructions')">Instructions</button>
+                <button class="tab-button" onclick="openTab(event, 'Leaderboard')">Leaderboard</button>
+            </div>
+            <div id="User" class="tab-content">
+                <p id="current_email" class="font-bold">User: </p>
+                <p id="games_played" class="font-bold">Games Played: </p> 
+                <div class="my-4 custom-select-container">
+                    <h2 class="font-bold mb-2">Mode:</h2>
+                    <div class="flex justify-center">
+                        <div class="relative inline-block w-1/2">
+                            <select class="custom-select" id="mode_selector_settings" onchange="setMode(this.value)">
+                                <!-- Options loaded dynamically from mode_config.py -->
+                            </select>
+                            <span class="caret">&#x25BC;</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="my-4 custom-select-container">
+                    <h2 class="font-bold mb-2">Difficulty:</h2>
+                    <div class="flex justify-center">
+                        <div class="relative inline-block w-1/2">
+                            <select class="custom-select" id="difficulty_selector_settings" onchange="setDifficulty(this.value)">
+                                <option value="Normal">Normal</option>
+                                <option value="Hard">Hard</option>
+                                <option value="Crazy">Crazy</option>
+                            </select>
+                            <span class="caret">&#x25BC;</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <button class="link-button" onclick="openCreateScenarioModal()">Create New Scenario</button>
+                </div>
+                <div class="flex justify-center items-center">
+                    <span class="mr-2">Include community-submitted scenarios?</span>
+                    <label class="switch">
+                        <input type="checkbox" id="community_scenarios_toggle" onchange="setIncludeCommunityScenarios(this.checked)">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <button class="inactive py-1 px-4 mt-6" onclick="logout()">Log out</button>
+                <button class="button py-1 px-4 mt-6 ok-button" onclick="dismissSettingsModal()">OK</button>
+            </div>
+
+            <div id="Instructions" class="tab-content hidden">
+                <p id="instructions-summary">
+                    This game aims to help you get a feel for the difficult decisions that people across the organization are making each day.
+                    <br><br>
+                    Winning looks like successfully balancing a simple set of metrics: staff retention, net votes, and revenue. If you're able to consistently maintain a positive score on those metrics – without letting tech debt overwhelm you – you'll do well!
+                    <br><br>
+                    Similar to the classic 90's <a href="https://www.visitoregon.com/the-oregon-trail-game-online/" class="font-bold underline">Oregon Trail</a> video game, you'll be faced with difficult decisions, and your choices will affect your chance of success. Also similar to the Oregon Trail, sometimes you won't have a choice: you'll be presented with something outside your control, which you'll just have to accept.
+                    <br><br>
+                    <span class="font-bold">If you're competitive:</span> the max score of 100 looks like staying alive for 25 turns on Crazy mode – ending the game with all four metrics at 100. 
+                    <br><br>
+                    <span id="more-instructions" class="text-white" style="display: none;">
+                        Oregonizer Trail aims to make tradeoffs more real. Each person and each team juggle different incentives, different priorities, and different constraints – and each of us are primarily aware of our own (while being less viscerally aware of those of others). This can be especially true in an organization with both highly technical staff and staff who lead less technical areas like account management, comms, operations, etc. It requires a lot of empathy to navigate the cross-functional set of decisions that go into each program we run!
+                        <br><br>
+                        This is difficult to learn, because most of us are primarily-aware of one type of priority/metric (and less tuned into the others) – while many decisions ultimately come down to yes or no, on specific questions.
+                        <br><br>
+                        The key insight for successful players will be that very few of these questions have an objectively-correct answer. Instead, winning will look like intuiting the likely effect of a given choice on your metrics and making the choice whose downsides you're prepared to accept at that moment, as you try to keep your head above water. It's all situational.
+                        <br><br>
+                        You'll also notice that effects of different choices have an element of randomness (sometimes effects are larger than at other times), and as the difficulty increases, those effect sizes grow. You don’t always know how a decision is going to turn out or the effect it’s going to have.
+                        <br><br>
+                        Good luck!
+                    </span>
+                </p>
+                <button class="button py-1 px-4 mt-3 ok-button" onclick="dismissSettingsModal()">OK</button>
+                <span id="toggle-more-instructions" class="underline cursor-pointer mx-2" onclick="toggleMoreInstructions()">More</span>
+            </div>
+
+            <div id="Leaderboard" class="tab-content hidden">
+                <p id="high_score" class="text-xl font-bold mb-2">Your High Score: </p> 
+                <table class="leaderboard-table mx-auto">
+                    <thead>
+                        <tr>
+                            <th style="padding-right: 10px;">User</th>
+                            <th style="padding-left: 10px;">High Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                    </tbody>
+                </table>
+                <button class="button py-1 px-4 mt-3 ok-button" onclick="dismissSettingsModal()">OK</button>
+            </div>
+
+            <div id="scoreDetailsModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+                <div class="text-center border p-4 my-2 max-w-4/5" style="background-color: var(--phosphor-dark); color: var(--phosphor-green); border: 2px solid var(--phosphor-green); border-radius: 0; max-width: 80%; max-height: 80vh; overflow-y: auto;">
+                    <h2 class="text-2xl font-bold mb-4">Score Details</h2>
+                    <p id="scoreBreakdown" class="mb-4"></p>
+                    <button class="inactive py-1 px-4 mt-3" onclick="dismissScoreDetails()">OK</button>
+                    <button class="button py-1 px-4 mt-3" onclick="startGame()">Restart Game</button>
+                </div>
+            </div>
+            
+            <!-- New Scenario Modal -->
+            <div id="createScenarioModal" class="fixed inset-2 bg-black bg-opacity-75 flex items-center justify-center hidden z-50">
+                <div class="text-center border px-10 my-2 max-w-4/5" style="background-color: var(--phosphor-dark); color: var(--phosphor-green); border: 2px solid var(--phosphor-green); border-radius: 0; max-width: 90%; max-height: 80vh; overflow-y: auto;">
+                    <h2 class="text-xl font-bold my-4">Create New Scenario</h2>
+                    <form id="createScenarioForm">
+                        <div class="form-group mb-4">
+                            <label for="scenarioName" class="block text-center">Scenario Name:</label>
+                            <div class="flex justify-center">
+                                <input type="text" id="scenarioName" class="form-control block px-2 text-black w-2/3 mt-1" required style="border-radius: 0; border: 2px solid var(--phosphor-green);">
+                            </div>
+                            <small id="scenarioNameError" class="text-red-500 hidden text-center">Invalid name. Please use only letters, numbers, and underscores.</small>
+                        </div>
+                        <div class="form-group inline-block mb-2 mx-2 w-2/5">
+                            <label for="scenarioMode" class="mb-1">Game Mode:</label>
+                            <select id="scenarioMode" class="custom-select" required></select>
+                            <small id="scenarioModeError" class="text-red-500 hidden">Invalid mode. Please select one of the existing modes.</small>
+                        </div>
+                        <div class="form-group inline-block mb-2 mx-2 w-2/5">
+                            <label for="scenarioType" class="mb-1">Scenario Type:</label>
+                            <select id="scenarioType" class="custom-select" required>
+                                <option value="decision" selected>Decision</option>
+                                <option value="informational">Informational</option>
+                            </select>
+                            <small id="scenarioTypeError" class="text-red-500 hidden">Invalid type. Please select 'decision' or 'informational'.</small>
+                        </div>
+                        <div class="form-group mb-2">
+                            <label for="scenarioText">Scenario message to the user:</label>
+                            <textarea id="scenarioText" class="form-control px-2 text-black w-2/3 mt-1" rows="2" placeholder="What is the difficult choice to be made?" required style="border-radius: 0; border: 2px solid var(--phosphor-green);"></textarea>
+                            <small id="scenarioTextError" class="text-red-500 hidden">Scenario text is required.</small>
+                        </div>
+                        <div id="decisionResponseFields" class="hidden">
+                            <div class="form-group mb-2">
+                                <label for="yesResponse">Response if the user selects Yes:</label>
+                                <textarea id="yesResponse" class="form-control px-2 text-black w-2/3 mt-1" rows="2" placeholder="What happens if they say Yes?" required style="border-radius: 0; border: 2px solid var(--phosphor-green);"></textarea>
+                                <small id="yesResponseError" class="text-red-500 hidden">A response is required for decision scenarios.</small>
+                            </div>
+                            <div class="form-group mb-2">
+                                <label for="noResponse">Response if the user selects No:</label>
+                                <textarea id="noResponse" class="form-control px-2 text-black w-2/3 mt-1" rows="2" placeholder="What happens if they say No?" required style="border-radius: 0; border: 2px solid var(--phosphor-green);"></textarea>
+                                <small id="noResponseError" class="text-red-500 hidden">A response is required for decision scenarios.</small>
+                            </div>
+                            <!-- Decision metrics will be dynamically generated based on selected mode -->
+                            <div id="decisionMetricsFields">
+                                <h3 class="font-bold mt-4">If Yes:</h3>
+                                <div id="yesMetrics"></div>
+                                <h3 class="font-bold mt-4">If No:</h3>
+                                <div id="noMetrics"></div>
+                            </div>
+                        </div>
+                        <!-- Informational metrics will be dynamically generated based on selected mode -->
+                        <div id="informationalMetricsFields" class="hidden"></div>
+                        <button type="submit" class="button py-1 px-4 my-4">Create Scenario</button>
+                        <button type="button" class="inactive py-1 px-4 my-4" onclick="closeCreateScenarioModal()">Cancel</button>
+                    </form>                    
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Bottom elements for narrow screens -->
+    <div id="bottom" class="bottom-element w-full px-4 mb-2">
+        <div class="flex justify-center gap-4">
+            <button class="button py-1 px-4 mt-4 hidden" id="restart_button_bottom" onclick="startGame()">Restart Game</button>
+        </div>
+        <div id="status-bottom" class="difficulty-mode-display flex gap-2 mb-2 py-2">
+            <div class="current-settings flex flex-col gap-2 py-2 text-center w-full cursor-pointer" onclick="document.getElementById('settings_button').click();">
+                <div><span class="font-bold">Mode:</span> <span id="current_mode_bottom"></span></div>
+                <div><span class="font-bold">Difficulty:</span> <span id="current_difficulty_bottom"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        // CSRF token for secure API calls - must be defined before loading external JS
+        const csrfToken = "{{ csrf_token() }}";
+    </script>
+    <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+</body>
+</html>

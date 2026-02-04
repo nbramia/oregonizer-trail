@@ -1,0 +1,106 @@
+name,mode,type,text,yes_staff_retention,yes_partner_retention,yes_partner_growth,yes_tech_debt,yes_revenue,yes_net_votes,no_staff_retention,no_partner_retention,no_partner_growth,no_tech_debt,no_revenue,no_net_votes,yes_response,no_response,info_staff_retention,info_partner_retention,info_partner_growth,info_tech_debt,info_revenue,info_net_votes
+feature_delay,Product Development,decision,"A feature is taking longer than anticipated.
+
+Push the team to hit the projected timeline?",-30,,,,,,25,-15,-20,,,,"Pushed the team to hit the deadline.
+
+Staff retention decreased.
+
+Partner retention held steady.","Allowed delay.
+
+Staff retention increased, partner growth and retention slightly decreased.",,,,,,
+leadership_feature_request,Product Development,decision,"Organizational leadership makes a request for a new feature.
+
+Prioritize it?",-25,,,,,,,,5,,,,"Prioritized the feature.
+
+Staff retention decreased.","Did not prioritize the feature request.
+
+Not much changed.",,,,,,
+sales_feature_request,Product Development,decision,"An important partner prospect makes a request for a new feature during the sales process.
+
+Prioritize it?",-15,,10,,,,,,-25,,,,"Prioritized the feature.
+
+Partner growth slightly increased.
+
+Staff retention slightly decreased.","Ignored the feature request.
+
+The potential partner didn't sign, and they told a number of other organizations not to bother speaking to us either.",,,,,,
+backend_issue,Product Development,decision,"Performance of the platform is degraded.
+
+Prioritize back-end improvements?",,-15,-20,30,,,,,10,-30,,,"Prioritized backend improvements instead of working on a new feature.
+
+Tech debt improved, partner growth and retention slightly decreased.","Ignored risks – built a new feature.
+
+Tech debt suffered, partner growth slightly increased.",,,,,,
+partner_feature_request,Product Development,decision,"A current partner makes a request for a new feature.
+
+Prioritize it?",15,25,-20,,,,,-20,10,,,,"Prioritized partner feature request.
+
+Partner retention increased, and staff retention slightly increased.
+
+Partner growth slightly decreased.","Ignored partner feature request and focused on something that prospective partners were asking for instead.
+
+Partner retention decreased, partner growth slightly increased.",,,,,,
+partner_change_request,Product Development,decision,"A current partner makes a request to change a current feature.
+
+Prioritize it?",,15,-20,,,,,-15,10,,,,"Prioritized change request.
+
+Partner retention slightly increased, partner growth slightly decreased.","Ignored change request and worked on something new instead.
+
+Partner retention slightly decreased, partner growth slightly increased.",,,,,,
+cost_spike,Product Development,decision,"Costs for a core service are spiking.
+
+Prioritize changes that would control those costs?",,-15,-20,20,,,,,10,-25,,,"Prioritized cost control.
+
+Tech debt improved, partner retention and growth slightly decreased.","Ignored cost control.
+
+Tech debt suffered.
+
+Partner growth slightly increased, which contributed to even more tech debt.",,,,,,
+support_requests_spiking,Product Development,decision,"Support requests are spiking.
+
+Prioritize changes that would make the platform more intuitive?",15,25,-20,,,,-15,-25,,,,,"Prioritized platform intuitiveness.
+
+Staff retention and partner retention increased, partner growth slightly decreased.","Decided not to prioritize making the platform easy to use.
+
+Partner retention decreased and staff retention slightly decreased.",,,,,,
+support_requests_taking_long,Product Development,decision,"Support requests are taking too long to resolve.
+
+Prioritize changes that would make it easier to diagnose and address issues?",25,25,-20,25,,,-15,-25,10,,,,"Prioritized issue diagnosis and resolution.
+
+Tech debt, staff retention, and partner retention improved, while partner growth slightly decreased.","Ignored issue diagnosis and resolution.
+
+Partner growth increased, partner and staff retention decreased.",,,,,,
+rest,Product Development,decision,"You just shipped a big release.
+
+Do you want your team to rest and recover, instead of immediately pushing forward?",30,-10,-15,,,,-30,15,10,,,,"Your team rested and regained their energy.
+
+Slight decrease in partner growth and retention.","Pushed forward!
+
+Staff retention decreased, partner growth and partner retention slightly increased.",,,,,,
+aws_outage,Product Development,informational,"Amazon Web Services outage - the platform went down for 24h.
+
+Partner retention decreased.",,,,,,,,,,,,,,,,-25,,,,
+vendor_change,Product Development,informational,"A key vendor changed something without notice, generating a laundry list of required backend changes.
+
+Tech debt suffered.",,,,,,,,,,,,,,,,,,-25,,
+trillion_records,Product Development,informational,"A partner tried to load a trillion records - the platform went down for 2h.
+
+Partner retention slightly decreased.",,,,,,,,,,,,,,,,-15,,,,
+amazing_hire,Product Development,informational,"That new hire is AMAZING.
+
+Staff retention increased, and tech debt slightly improved.",,,,,,,,,,,,,,,25,,,15,,
+missed_user_deadline,Product Development,informational,"You missed a deadline you'd already communicated to users.
+
+Partner retention slightly decreased.",,,,,,,,,,,,,,,,-15,,,,
+missed_prospect_deadline,Product Development,informational,"You missed a deadline you'd already communicated to potential new partners.
+
+Partner growth slightly decreased.",,,,,,,,,,,,,,,,,-20,,,
+bad_press,Product Development,informational,"Ouch, that was a rough article in the press.
+
+Partner growth and partner retention slightly decreased.",,,,,,,,,,,,,,,,-20,-15,,,
+great_press,Product Development,informational,"Wow! Great coverage in a major newspaper.
+
+Partner growth and partner retention slightly increased.",,,,,,,,,,,,,,,,10,10,,,
+feature_success,Product Development,informational,"Users love that new feature!
+
+Partner retention increased, and partner growth slightly increased.",,,,,,,,,,,,,,,,20,10,,,

@@ -1,0 +1,401 @@
+/* Authentic Oregon Trail Green Phosphor Colors */
+:root {
+    --phosphor-green: #33ff33;
+    --phosphor-dark: #000000;
+    --border-color: #33ff33;
+}
+
+body {
+    background-color: var(--phosphor-dark);
+    color: var(--phosphor-green);
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    /* Phosphor glow effect */
+    text-shadow: 0 0 5px rgba(51, 255, 51, 0.7);
+    letter-spacing: 0.5px;
+}
+
+/* CRT Screen Effects */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15),
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 2px
+    );
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* CRT Vignette Effect */
+body::after {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+    pointer-events: none;
+    z-index: 999;
+}
+
+h1 {
+    font-family: 'Press Start 2P', sans-serif;
+    font-weight: bold;
+    color: var(--phosphor-green);
+    text-shadow: 0 0 8px rgba(51, 255, 51, 0.8);
+}
+
+/* Simplified Button Styles - No Rounded Corners */
+.button {
+    background-color: var(--phosphor-green);
+    color: var(--phosphor-dark);
+    border-radius: 0;
+    width: auto;
+    border: 2px solid var(--phosphor-green);
+    font-weight: bold;
+    text-shadow: none;
+}
+.active {
+    background-color: var(--phosphor-green);
+    color: var(--phosphor-dark);
+    text-shadow: none;
+}
+.inactive {
+    background-color: var(--phosphor-dark);
+    color: var(--phosphor-green);
+    border-radius: 0;
+    border: 2px solid var(--phosphor-green);
+}
+.footer {
+    color: var(--phosphor-green);
+    margin-top: auto;
+}
+.hidden {
+    display: none;
+}
+#overlay {
+    display: none;
+}
+.tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+.tab-button {
+    background-color: var(--phosphor-dark);
+    color: var(--phosphor-green);
+    border: 2px solid var(--phosphor-green);
+    border-radius: 0;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin: 0 5px;
+    transition: background-color 0.2s, color 0.2s;
+    font-size: 1.35rem;
+    display: inline-block;
+    white-space: normal;
+    text-align: center;
+    width: auto;
+}
+.tab-button.active {
+    background-color: var(--phosphor-green);
+    color: var(--phosphor-dark);
+    font-weight: bold;
+    text-shadow: none;
+}
+.link-button {
+    background-color: var(--phosphor-dark);
+    color: var(--phosphor-green);
+    border: none;
+    border-radius: 0;
+    padding: 10px 20px;
+    cursor: pointer;
+    margin: 0 5px;
+    transition: background-color 0.2s, color 0.2s;
+    font-size: 1.0rem;
+    display: inline-block;
+    white-space: normal;
+    text-align: center;
+    width: auto;
+    text-decoration: underline;
+    font-weight: bold;
+}
+.tab-content {
+    display: none;
+}
+.tab-content.active {
+    display: block;
+}
+.form-control {
+    color: black !important;
+    background-color: white;
+    border: 2px solid var(--phosphor-green) !important;
+    border-radius: 0 !important;
+}
+.health-bar-container {
+    width: 150px;
+    background-color: var(--phosphor-dark);
+    border: 2px solid var(--phosphor-green);
+    border-radius: 0;
+    overflow: hidden;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+.health-bar {
+    height: 20px;
+    background-color: var(--phosphor-green);
+    transition: width 0.5s ease-in-out;
+    width: 0;
+    box-shadow: 0 0 10px rgba(51, 255, 51, 0.5);
+}
+.metric-label {
+    white-space: nowrap;
+    margin-right: 10px;
+    text-align: right;
+    width: 170px;
+}
+.metric-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+}
+#more-instructions {
+    display: none;
+}
+.custom-select-container {
+    position: relative;
+    width: 100%;
+}
+.relative {
+    position: relative;
+}
+.custom-select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 100%;
+    padding: 5px;
+    background-color: var(--phosphor-dark);
+    color: var(--phosphor-green);
+    border: 2px solid var(--phosphor-green);
+    border-radius: 0;
+    font-size: 1rem;
+    line-height: 1.1;
+    outline: none;
+    text-align: center;
+    padding-right: 1.0rem;
+    white-space: normal;
+    height: auto;
+}
+.caret {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--phosphor-green);
+}
+.custom-select option {
+    background-color: var(--phosphor-dark) !important;
+    color: var(--phosphor-green) !important;
+}
+
+/* Force select dropdown styling across all browsers */
+select {
+    background-color: var(--phosphor-dark) !important;
+    color: var(--phosphor-green) !important;
+}
+
+select option {
+    background-color: var(--phosphor-dark) !important;
+    color: var(--phosphor-green) !important;
+}
+
+/* WebKit specific dropdown styling */
+select option:checked,
+select option:hover {
+    background-color: var(--phosphor-green) !important;
+    color: var(--phosphor-dark) !important;
+}
+.cropped-gif {
+    overflow: hidden;
+    padding-bottom: 0;
+    position: relative;
+    width: 100%;
+    max-width: 90vh;
+}
+.cropped-gif iframe {
+    position: absolute;
+    top: 40%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+/* Toggle Switch */
+.switch {
+position: relative;
+display: inline-block;
+width: 40px;
+height: 24px;
+}
+.switch input {
+opacity: 0;
+width: 0;
+height: 0;
+}
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--phosphor-dark);
+    border: 2px solid var(--phosphor-green);
+    transition: .4s;
+    border-radius: 20px; /* Make slider rounded */
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 0px;
+    bottom: 0px;
+    background-color: var(--phosphor-green);
+    transition: .4s;
+    border-radius: 50%; /* Make knob rounded */
+}
+input:checked + .slider {
+    background-color: var(--phosphor-green);
+}
+input:checked + .slider:before {
+    background-color: var(--phosphor-dark);
+    transform: translateX(20px);
+}
+
+/* ASCII Border Styles for UI Sections */
+#metrics, #messages, #scenario, .text-center.bg-black.border {
+    border: 2px solid var(--phosphor-green);
+    border-radius: 0;
+    position: relative;
+}
+
+/* Add ASCII corner decorations */
+#metrics::before, #messages::before, #scenario::before {
+    content: "╔═══════════════════════════════════════════════════╗";
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    height: 2px;
+    color: var(--phosphor-green);
+    font-size: 0;
+    pointer-events: none;
+}
+@media (max-width: 496px) {
+    .current-settings {
+        font-size: small;
+        margin-top: 16px;
+    }
+    .metric-item {
+        flex-direction: row;
+        align-items: center;
+        justify-content: flex-normal;
+        font-size: small;
+        margin: 0px;
+    }
+    .metric-label {
+        margin-right: 5px;
+        margin-bottom: 0px;
+        width: auto;
+        text-align: center;
+        flex: 0 0 auto;
+    }
+    .health-bar-container {
+        width: 100%;
+        flex: 1;
+        margin-left: 7px;
+        max-width: 130px;
+    }
+    .health-bar {
+        height: 10px !important;
+    }
+    #metrics, #messages, #scenario {
+        width: 90%;
+        margin-top: 2 !important;
+        margin-bottom: 2 !important;
+    }
+    #metrics {
+        margin-top: 2 !important;
+        margin-bottom: 2 !important;
+    }
+}
+@media (max-width: 768px) {
+    h1 {
+        margin-top: 1 !important;
+        margin-bottom: 0 !important;
+    }
+    .cropped-gif {
+        max-width: 90%;
+    }
+    .switch {
+        width: 32px;
+        height: 16px;
+    }
+    .slider {
+        border-radius: 16px;
+    }
+    .slider:before {
+        height: 12px;
+        width: 12px;
+        left: 2px;
+        bottom: 2px;
+    }
+    input:checked + .slider:before {
+        transform: translateX(9px);
+    }
+    .top-element {
+        display: none;
+    }
+    .bottom-element {
+        display: block;
+    }
+    #start_button {
+        display: block;
+    }
+    #restart_button_bottom {
+        display: block;
+    }
+}
+@media (min-width: 768px) {
+    .bottom-element {
+        display: none;
+    }
+}

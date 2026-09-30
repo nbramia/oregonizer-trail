@@ -3,8 +3,9 @@ Main Flask application
 Handles initialization, configuration, and blueprint registration
 """
 import os
+import json
 import logging
-from flask import Flask, session, request, redirect
+from flask import Flask, session, request, redirect, g
 from authlib.integrations.flask_client import OAuth
 from flask_login import LoginManager, current_user
 from flask_migrate import Migrate
@@ -12,7 +13,7 @@ from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 
 from game_logic import developmentGame
-from models import db, User
+from models import db, User, GameState
 
 # Load environment variables
 load_dotenv()
@@ -75,46 +76,66 @@ google = oauth.register(
     issuer='https://accounts.google.com'
 )
 
-# Per-user game storage using sessions
-# Store game instances in a dictionary keyed by user ID
-_game_instances = {}
+# Per-user game storage
+# Games are persisted in the game_state table (not process memory) so they
+# survive across serverless invocations. Loaded once per request into g,
+# written back after the request.
+
+def _game_key(create=True):
+    """Return the storage key for the current user's game"""
+    if current_user.is_authenticated:
+        return f"user_{current_user.id}"
+    # For unauthenticated users, use a temporary session-based game
+    # (This shouldn't happen in practice since routes require login)
+    session_id = session.get('temp_session_id')
+    if not session_id:
+        if not create:
+            return None
+        import uuid
+        session_id = str(uuid.uuid4())
+        session['temp_session_id'] = session_id
+    return f"temp_{session_id}"
 
 def get_game():
     """Get or create a game instance for the current user"""
-    if not current_user.is_authenticated:
-        # For unauthenticated users, use a temporary session-based game
-        # (This shouldn't happen in practice since routes require login)
-        session_id = session.get('temp_session_id')
-        if not session_id:
-            import uuid
-            session_id = str(uuid.uuid4())
-            session['temp_session_id'] = session_id
-        user_key = f"temp_{session_id}"
-    else:
-        # For authenticated users, use their user ID
-        user_key = f"user_{current_user.id}"
+    if 'game' not in g:
+        user_key = _game_key()
+        row = GameState.query.filter_by(user_key=user_key).first()
+        if row:
+            g.game = developmentGame.from_state(json.loads(row.state))
+        else:
+            g.game = developmentGame()
+            logging.debug(f"Created new game instance for {user_key}")
+        g.game_key = user_key
+    return g.game
 
-    # Create game instance if it doesn't exist for this user
-    if user_key not in _game_instances:
-        _game_instances[user_key] = developmentGame()
-        logging.debug(f"Created new game instance for {user_key}")
-
-    return _game_instances[user_key]
+@app.after_request
+def save_game(response):
+    """Persist the game if this request touched it"""
+    game = g.pop('game', None)
+    if game is not None:
+        try:
+            state = json.dumps(game.to_state())
+            row = GameState.query.filter_by(user_key=g.game_key).first()
+            if row:
+                row.state = state
+            else:
+                db.session.add(GameState(user_key=g.game_key, state=state))
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"Failed to save game state for {g.game_key}: {e}")
+    return response
 
 def clear_game():
     """Clear the game instance for the current user"""
-    if not current_user.is_authenticated:
-        session_id = session.get('temp_session_id')
-        if session_id:
-            user_key = f"temp_{session_id}"
-        else:
-            return
-    else:
-        user_key = f"user_{current_user.id}"
-
-    if user_key in _game_instances:
-        del _game_instances[user_key]
-        logging.debug(f"Cleared game instance for {user_key}")
+    user_key = _game_key(create=False)
+    if not user_key:
+        return
+    g.pop('game', None)
+    GameState.query.filter_by(user_key=user_key).delete()
+    db.session.commit()
+    logging.debug(f"Cleared game instance for {user_key}")
 
 # Register blueprints
 from routes.auth import auth_bp

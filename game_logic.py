@@ -246,6 +246,60 @@ class developmentGame:
 
         return response_text
 
+    def to_state(self):
+        """Serialize to a JSON-safe dict (scenarios stored as IDs)"""
+        ids = lambda scenarios: [s.id for s in scenarios]
+        return {
+            "difficulty": self.difficulty,
+            "mode": self.mode,
+            "variation_range": list(self.variation_range),
+            "include_community_scenarios": self.include_community_scenarios,
+            "metrics": self.metrics,
+            "turns_survived": self.turns_survived,
+            "status": self.status,
+            "current_scenario": self.current_scenario.id if self.current_scenario else None,
+            "last_scenario_was_informational": self.last_scenario_was_informational,
+            "decision_scenarios": ids(self.decision_scenarios),
+            "informational_scenarios": ids(self.informational_scenarios),
+            "decision_scenarios_queue": ids(self.decision_scenarios_queue),
+            "informational_scenarios_queue": ids(self.informational_scenarios_queue),
+        }
+
+    @classmethod
+    def from_state(cls, state):
+        """Rebuild a game from to_state() output without reshuffling scenarios"""
+        game = cls.__new__(cls)
+        game.difficulty = state["difficulty"]
+        game.mode = state["mode"]
+        game.variation_range = tuple(state["variation_range"])
+        game.include_community_scenarios = state["include_community_scenarios"]
+        game.metrics = state["metrics"]
+        game.turns_survived = state["turns_survived"]
+        game.status = state["status"]
+        game.last_scenario_was_informational = state["last_scenario_was_informational"]
+
+        all_ids = set(state["decision_scenarios"]) | set(state["informational_scenarios"])
+        if state["current_scenario"] is not None:
+            all_ids.add(state["current_scenario"])
+        by_id = {s.id: s for s in Scenario.query.filter(Scenario.id.in_(all_ids)).all()} if all_ids else {}
+        lookup = lambda id_list: [by_id[i] for i in id_list if i in by_id]
+
+        game.decision_scenarios = lookup(state["decision_scenarios"])
+        game.informational_scenarios = lookup(state["informational_scenarios"])
+        game.decision_scenarios_queue = lookup(state["decision_scenarios_queue"])
+        game.informational_scenarios_queue = lookup(state["informational_scenarios_queue"])
+        game.current_scenario = by_id.get(state["current_scenario"])
+
+        # Scenario IDs change when populate_scenarios.py reloads the CSVs;
+        # rebuild the deck if the saved one no longer exists
+        if not game.decision_scenarios:
+            game.setup_scenarios()
+
+        # Also set as attributes for backwards compatibility
+        for metric, value in game.metrics.items():
+            setattr(game, metric, value)
+        return game
+
     def apply_metric_change(self, metric, change):
         if metric in self.metrics:
             self.metrics[metric] += self.apply_variation(change)

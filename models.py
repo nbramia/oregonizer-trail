@@ -46,3 +46,14 @@ class Scenario(db.Model):
     def __repr__(self):
         return f'<Scenario {self.name}>'
 
+
+class GameState(db.Model):
+    """Serialized in-progress game, keyed per user/session.
+
+    Serverless hosts (Vercel) don't keep memory between requests, so the
+    game must live in the database rather than a module-level dict.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    user_key = db.Column(db.String(128), unique=True, nullable=False)
+    state = db.Column(db.Text, nullable=False)  # JSON from developmentGame.to_state()
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

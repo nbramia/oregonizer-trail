@@ -85,10 +85,12 @@ python update_scenario_metrics.py # Update existing scenario metrics
 ### Environment Variables
 Required in `.env`:
 - `DATABASE_URL`: PostgreSQL connection string (auto-converts postgres:// to postgresql://)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: OAuth client credentials
 - `GOOGLE_REDIRECT_URI`: OAuth callback URL (defaults to localhost:5001 for development)
+- `SECRET_KEY`: required in production (random per-process fallback breaks sessions on serverless)
 
 ### Database Connection
-Falls back to SQLite (`sqlite:///app.db`) if `DATABASE_URL` not set. Production uses PostgreSQL (Heroku).
+Falls back to SQLite (`sqlite:///app.db`) if `DATABASE_URL` not set. Production uses Neon Postgres (via Vercel Marketplace). SQLAlchemy is pinned `<2.1` because 2.1 defaults `postgresql://` to the psycopg3 driver, and the app ships psycopg2.
 
 ### Frontend Architecture
 Single-page application in `templates/index.html` with inline JavaScript. Communicates with backend via fetch API for game state, authentication, and scenario handling.
@@ -108,7 +110,7 @@ Informational scenarios:
 ```
 
 ### Game State Management
-Game instance initialized at app startup with `app.app_context()`. Single shared game object persists across requests (not production-ready for multi-user concurrent play).
+Each user's game is stored in the `game_state` table (keyed `user_<id>`), because Vercel's serverless instances don't share memory. `get_game()` in app.py rebuilds it via `developmentGame.from_state()` once per request (cached in `flask.g`); an `after_request` hook saves `to_state()` back. Scenarios are serialized as IDs. Any new game attribute must be added to both `to_state()` and `from_state()`.
 
 ## Testing and Deployment
 
@@ -119,9 +121,13 @@ Game instance initialized at app startup with `app.app_context()`. Single shared
 4. Test authentication, game flow, scenario handling
 
 ### Deployment Notes
-- Uses Heroku (Procfile + runtime.txt for Python 3.12.4)
-- Database migrations run automatically via Heroku release phase
-- OAuth redirect URI must match deployed domain
+- Hosted on Vercel: project `oregonizertrail`, live at https://oregonizertrail.vercel.app (Heroku app and oregonizertrail.org are gone)
+- `vercel.json` sets the Flask preset; `.python-version` pins 3.12 (force-added, since .gitignore ignores it)
+- Deploy with `./deploy.sh "msg"`, which migrates and reseeds Neon (Heroku's old release phase) and then runs `vercel deploy --prod`. GitHub isn't connected to Vercel.
+- Env vars live in Vercel: DATABASE_URL(_UNPOOLED), SECRET_KEY, GOOGLE_CLIENT_ID/SECRET, GOOGLE_REDIRECT_URI
+- Google OAuth client: GCP project `oregonizer-trail` (nbramia@gmail.com). Redirect URI must match the deployed domain.
+- NEVER run tests with DATABASE_URL set to production: tests switch to SQLite only after import and would hit the real DB
+- 40 of 83 tests fail on main because they assume the old "Product Development" default mode (only "Movement Labs" is enabled), so deploy.sh's test gate currently blocks
 
 ## Working with Nathan's Preferences
 

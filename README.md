@@ -201,14 +201,14 @@ Game ends immediately when **any** metric drops to ≤ 0 with specific failure m
 - **Tenor Embed API**: Animated GIF integration for game states
 
 ### Database
-- **PostgreSQL** (production via Heroku)
+- **PostgreSQL** (production via Neon, provisioned through the Vercel Marketplace)
 - **SQLite** (local development fallback)
 - **Psycopg2-binary 2.9.9**: PostgreSQL adapter
 
 ### Deployment
-- **Gunicorn 22.0.0**: WSGI HTTP server
-- **Heroku**: Platform-as-a-Service hosting
-- **Python 3.9.6**: Runtime (specified in runtime.txt)
+- **Vercel**: Serverless Python hosting (`vercel.json` sets the Flask preset)
+- **Python 3.12**: Runtime (specified in `.python-version`)
+- Live at https://oregonizertrail.vercel.app (the old oregonizertrail.org domain and Heroku app are retired)
 
 ## Architecture and Code Organization
 
@@ -225,8 +225,9 @@ oregonizer_trail/
 ├── scenarios.py                # Legacy scenario definitions (class-based, mostly unused)
 ├── utilities.py                # Helper functions (password hashing)
 ├── requirements.txt            # Python dependencies
-├── runtime.txt                 # Heroku Python version
-├── Procfile                    # Heroku process definition
+├── vercel.json                 # Vercel config (Flask framework preset)
+├── .python-version             # Python version for Vercel
+├── .vercelignore               # Files excluded from Vercel uploads
 ├── .env                        # Environment variables (not committed)
 ├── .env.example                # Environment variable template
 ├── routes/                     # Flask blueprint routes (modular organization)
@@ -523,77 +524,44 @@ python app.py
 # Runs on http://0.0.0.0:5001
 ```
 
-### Production Deployment (Heroku)
+### Production Deployment (Vercel)
 
-**Configuration**:
-- `Procfile`: Defines web dyno command
-  ```
-  web: python app.py
-  ```
-- `runtime.txt`: Specifies Python version
-  ```
-  python-3.9.6
-  ```
+**Hosting**: Vercel project `oregonizertrail` (team `nathan-ramias-projects`), served at https://oregonizertrail.vercel.app. The GitHub repo is *not* connected to Vercel; deploys go out from the local checkout via the Vercel CLI.
 
-**Environment Variables**:
-```bash
-heroku config:set DATABASE_URL=<heroku-postgres-url>
-heroku config:set GOOGLE_REDIRECT_URI=https://www.oregonizertrail.org/authorize
-```
+**Database**: Neon Postgres (`oregonizertrail-db`), attached through the Vercel Marketplace, which injects `DATABASE_URL` / `DATABASE_URL_UNPOOLED` into the project env.
 
-**Database Migrations**:
-```bash
-# Create migration
-flask db migrate -m "description"
+**Environment Variables** (Vercel → Settings → Environment Variables, Production):
+- `DATABASE_URL`, `DATABASE_URL_UNPOOLED` (from the Neon integration)
+- `SECRET_KEY` (required: serverless instances must share one key or sessions break)
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI=https://oregonizertrail.vercel.app/authorize`
 
-# Apply migration (auto-runs on Heroku deployment)
-flask db upgrade
-```
+The Google OAuth client lives in the `oregonizer-trail` Google Cloud project (nbramia@gmail.com). Its authorized redirect URIs must include the URI above.
+
+**Serverless game state**: Vercel doesn't keep process memory between requests, so each user's in-progress game is serialized (`developmentGame.to_state()`) into the `game_state` table after every request and rebuilt (`from_state()`) on the next one.
 
 **Deployment Process**:
-
-**Recommended (Automated):**
 ```bash
-# Use the deployment script (enforces tests)
 ./deploy.sh "Your commit message describing the changes"
 
-# The script automatically:
+# The script:
 # 1. Runs all tests (aborts if any fail)
-# 2. Stages and commits changes
-# 3. Pushes to GitHub
-# 4. Triggers Heroku auto-deploy
+# 2. Commits and pushes to GitHub
+# 3. Pulls production env from Vercel, runs `flask db upgrade` and
+#    `populate_scenarios.py` against Neon (Heroku's old release phase)
+# 4. Runs `vercel deploy --prod`
 ```
 
-**What Happens on Heroku** (via Procfile `release` phase):
+**Manual**:
 ```bash
-# Heroku automatically runs:
-1. flask db upgrade              # Apply database migrations
-2. python populate_scenarios.py  # Update scenarios from CSV
-3. python app.py                 # Start web server
+vercel env pull /tmp/prod.env --environment=production --yes
+export DATABASE_URL=$(grep '^DATABASE_URL_UNPOOLED=' /tmp/prod.env | cut -d= -f2- | tr -d '"')
+flask --app app db upgrade && python populate_scenarios.py
+unset DATABASE_URL; rm /tmp/prod.env
+vercel deploy --prod
 ```
 
-**This means**:
-- Editing `scenarios.csv` and deploying automatically updates the database
-- Editing `mode_config.py` and deploying automatically updates available modes
-- No manual database updates needed after deployment
-
-**Manual (Not Recommended):**
-```bash
-git add -A
-git commit -m "Your message"
-git push origin main  # Heroku auto-deploys from GitHub
-
-# Heroku automatically:
-# 1. Detects Python app (runtime.txt)
-# 2. Installs dependencies (requirements.txt)
-# 3. Runs database migrations (release phase)
-# 4. Starts web dyno (Procfile)
-```
-
-**📚 Complete Deployment Documentation:**
-- **DEPLOYMENT_QUICK_START.md** - Quick reference for common deployment tasks
-- **VERSION_MANAGEMENT.md** - Comprehensive deployment workflow and testing guide
-- See these files for detailed deployment procedures, testing requirements, and troubleshooting
+**Warning**: never run the test suite with `DATABASE_URL` pointing at production. The tests swap to SQLite only after `app` is imported, so they would write to (and `drop_all` on) the real database.
 
 ### Database Connection Logic (app.py:28-36)
 
@@ -607,7 +575,7 @@ else:
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 ```
 
-- Heroku provides `DATABASE_URL` with `postgres://` scheme
+- Some providers (e.g. Heroku) supply `DATABASE_URL` with a `postgres://` scheme
 - SQLAlchemy 2.x requires `postgresql://` scheme
 - Automatic replacement for compatibility
 - Falls back to SQLite for local development without env var
@@ -668,7 +636,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 
 **DATABASE_URL**:
 - Format: `postgresql://user:password@host:port/database`
-- Heroku auto-provides this
+- Vercel's Neon integration auto-provides this (plus `DATABASE_URL_UNPOOLED`, used for migrations)
 - Local: Set in `.env` file
 
 **SECRET_KEY**:

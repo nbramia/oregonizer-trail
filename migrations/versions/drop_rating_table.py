@@ -17,8 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    # Drop the rating table
-    op.drop_table('rating')
+    # Drop the rating table. On a fresh database this branch can run before
+    # a5307423edb5 creates it, so only drop when present.
+    if 'rating' in sa.inspect(op.get_bind()).get_table_names():
+        op.drop_table('rating')
 
 
 def downgrade():

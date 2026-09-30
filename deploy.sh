@@ -4,7 +4,7 @@
 # Oregonizer Trail Deployment Script
 #
 # This script enforces a rigorous test-before-deploy policy.
-# ALL tests must pass before code is pushed to GitHub and deployed to Heroku.
+# ALL tests must pass before code is pushed to GitHub and deployed to Vercel.
 #
 # Usage: ./deploy.sh "Your commit message here"
 #
@@ -14,7 +14,9 @@
 # 3. Abort deployment if any tests fail
 # 4. Stage all changes
 # 5. Commit with provided message + metadata
-# 6. Push to GitHub (triggers Heroku auto-deploy)
+# 6. Push to GitHub
+# 7. Migrate + reseed the production (Neon) database
+# 8. Deploy to Vercel production (https://oregonizertrail.vercel.app)
 ###############################################################################
 
 # Color codes for output
@@ -64,8 +66,6 @@ if echo "$TEST_OUTPUT" | grep -q "ModuleNotFoundError"; then
     echo "Tests failed due to missing Python dependencies."
     echo "This is expected if you haven't installed the requirements locally."
     echo ""
-    echo "The tests WILL run on Heroku during deployment."
-    echo "If tests fail on Heroku, the deployment will be rolled back."
     echo ""
     read -p "Continue deployment without local tests? (yes/no): " -r
     echo ""
@@ -146,20 +146,30 @@ fi
 echo -e "${GREEN}✓ Pushed to GitHub${NC}"
 echo ""
 
-# Step 6: Deployment triggered
+# Step 6: Migrate and reseed the production database
+# (Heroku did this in its release phase; Vercel has no equivalent)
+echo -e "${YELLOW}Step 6: Migrating production database...${NC}"
+PROD_ENV=$(mktemp)
+trap 'rm -f "$PROD_ENV"' EXIT
+vercel env pull "$PROD_ENV" --environment=production --yes >/dev/null || { echo -e "${RED}Could not pull Vercel env${NC}"; exit 1; }
+PROD_DB=$(grep '^DATABASE_URL_UNPOOLED=' "$PROD_ENV" | cut -d= -f2- | tr -d '"')
+DATABASE_URL="$PROD_DB" flask --app app db upgrade || { echo -e "${RED}Migration failed${NC}"; exit 1; }
+DATABASE_URL="$PROD_DB" python3 populate_scenarios.py || { echo -e "${RED}Scenario reseed failed${NC}"; exit 1; }
+echo -e "${GREEN}✓ Database migrated and scenarios reloaded${NC}"
+echo ""
+
+# Step 7: Deploy to Vercel
+echo -e "${YELLOW}Step 7: Deploying to Vercel...${NC}"
+vercel deploy --prod --yes || { echo -e "${RED}Vercel deploy failed${NC}"; exit 1; }
+echo ""
+
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}DEPLOYMENT SUCCESSFUL${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 echo "✓ Tests passed ($TEST_COUNT tests)"
-echo "✓ Changes committed"
-echo "✓ Pushed to GitHub"
+echo "✓ Changes committed and pushed to GitHub"
+echo "✓ Database migrated, scenarios reloaded"
+echo "✓ Deployed: https://oregonizertrail.vercel.app"
 echo ""
-echo "Heroku will now automatically deploy from GitHub."
-echo ""
-echo "Monitor deployment:"
-echo "  heroku logs --tail -a YOUR_APP_NAME"
-echo ""
-echo "View app:"
-echo "  open https://YOUR_APP_URL"
-echo ""
+echo "Logs: vercel logs oregonizertrail.vercel.app"

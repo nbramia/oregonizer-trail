@@ -114,3 +114,7 @@ archive/
 
 # Git history bundle
 *.bundle
+
+.vercel
+.venv
+.env*

@@ -147,7 +147,6 @@ echo -e "${GREEN}✓ Pushed to GitHub${NC}"
 echo ""
 
 # Step 6: Migrate and reseed the production database
-# (Heroku did this in its release phase; Vercel has no equivalent)
 echo -e "${YELLOW}Step 6: Migrating production database...${NC}"
 PROD_ENV=$(mktemp)
 trap 'rm -f "$PROD_ENV"' EXIT

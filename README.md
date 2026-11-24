@@ -17,27 +17,23 @@ You'll also notice that effects of different choices have an element of randomne
 Similar to the classic 90's [Oregon Trail](https://www.visitoregon.com/the-oregon-trail-game-online/) video game, you'll be faced with difficult decisions, and your choices will affect your chance of success. Also similar to the Oregon Trail, sometimes you won't have a choice: you'll be presented with something outside your control, which you'll just have to accept.
 
 ---
-
 ## Overview
 
-A web-based simulation game where players manage critical metrics through decision-making scenarios while navigating external events, all in a retro terminal-style interface.
+A web-based simulation game where players manage critical metrics through decision-making scenarios while navigating external events, all in a retro terminal-style interface. Live at https://oregonizertrail.vercel.app.
 
 ## Table of Contents
 
 - [Core Features](#core-features)
 - [Game Rules and Behavior](#game-rules-and-behavior)
-- [Tech Stack](#tech-stack)
-- [Architecture and Code Organization](#architecture-and-code-organization)
-- [State Management](#state-management)
-- [User Management and Data](#user-management-and-data)
-- [Database Schema](#database-schema)
-- [Build and Deployment](#build-and-deployment)
-- [Development Workflow](#development-workflow)
-- [Environment Configuration](#environment-configuration)
 - [Gameplay Examples](#gameplay-examples)
 - [Scoring System](#scoring-system)
-- [Game Constraints](#game-constraints)
-- [Code Patterns and Standards](#code-patterns-and-standards)
+- [Tech Stack](#tech-stack)
+- [Architecture and Code Organization](#architecture-and-code-organization)
+- [Database Schema](#database-schema)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [Testing](#testing)
+- [Deployment](#deployment)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
@@ -46,513 +42,391 @@ A web-based simulation game where players manage critical metrics through decisi
 
 ### Game Modes
 
-The application supports multiple game modes, each with unique scenarios. Available modes are configured in `mode_config.py`.
+Each mode has its own scenarios and metrics. Modes are configured in `mode_config.py`.
 
-**Current Modes**:
-- **Product Development**: Scenarios focused on feature prioritization, technical debt, team capacity, and product roadmap decisions
-- **Partnership & Support**: Scenarios centered on customer relationships, support operations, renewal strategies, and stakeholder management
-- **Movement Labs**: Scenarios focused on movement building, community engagement, and organizational growth
+| Mode | Status | Metrics |
+|------|--------|---------|
+| Movement Labs | Enabled (default) | Staff Retention, Revenue, Net Votes, Tech Debt |
+| Product Development | Defined, disabled | Staff Retention, Partner Retention, Partner Growth, Tech Debt |
+| Partnership & Support | Defined, disabled | Staff Retention, Partner Retention, Partner Growth, Tech Debt |
 
-**Configuring Modes**:
-To enable/disable modes, edit `mode_config.py`:
+To enable or disable a mode, edit its entry in `MODES` in `mode_config.py`:
 
 ```python
-MODES = [
-    {
-        'name': 'Product Development',
-        'enabled': True,    # Set to False to hide this mode
-        'default': True,    # This is the default mode on game start
-        'description': '...'
-    },
-    # ... other modes
-]
+{
+    'name': 'Product Development',
+    'enabled': False,   # True to show this mode
+    'default': False,   # Exactly one enabled mode should be the default
+    'description': '...',
+    'metrics': ['staff_retention', 'partner_retention', 'partner_growth', 'tech_debt']
+}
 ```
 
-Changes take effect on next deployment. See [MODE_CONFIGURATION_GUIDE.md](MODE_CONFIGURATION_GUIDE.md) for complete documentation.
+Scenarios for every mode, including disabled ones, live in `scenarios_*.csv`. Changes to `mode_config.py` take effect on the next deploy.
 
 ### Scenario Types
-1. **Decision Scenarios (75% frequency)**: Present players with Yes/No choices that affect metrics differently based on their selection
-2. **Informational Scenarios (25% frequency)**: External events that happen to the player regardless of choice, reflecting real-world unpredictability
+
+1. **Decision scenarios**: a Yes/No choice that affects metrics differently depending on the answer.
+2. **Informational scenarios**: external events that happen regardless of choice, reflecting real-world unpredictability. They are never shown on turn 1 or twice in a row, and otherwise appear with a 20% chance each turn.
 
 ### Difficulty Levels
-- **Normal**: Starting metrics at 100, variation range 0.8-1.25x (80% to 125% of base effect)
-- **Hard**: Starting metrics at 85 (tech debt at 75), variation range 1.0-1.4x
-- **Crazy**: Starting metrics at 75 (tech debt at 50), variation range 1.1-1.6x
+
+| Level | Starting metrics | Starting tech debt | Variation range |
+|-------|------------------|--------------------|-----------------|
+| Normal | 100 | 100 | 0.8-1.25x |
+| Hard | 85 | 75 | 1.0-1.4x |
+| Crazy | 75 | 50 | 1.1-1.6x |
 
 ### Community Features
-- **Scenario Creation**: Authenticated users can create custom scenarios with validation
-- **Rating System**: Thumbs up/down ratings for both scenario text and response outcomes
-- **Toggle Control**: Players can enable/disable community-submitted scenarios
+
+- **Scenario creation**: signed-in users can submit custom scenarios, which are validated before they are saved.
+- **Toggle control**: players can include or exclude community-submitted scenarios (excluded by default).
 
 ### Authentication
-- **Email/Password**: Traditional authentication with bcrypt password hashing
-- **Google OAuth**: Single sign-on integration with dynamic redirect URI configuration
+
+- **Google OAuth**: single sign-on; an account is created on first sign-in.
+- **Email/password**: login for existing accounts with a bcrypt-hashed password.
 
 ### User Statistics
-- **High Score**: Automatically calculated and tracked based on difficulty, survival, and metrics
-- **Games Played**: Total completed games (reached end state)
-- **Games Started**: Games that reached Turn 2 or beyond
-- **Last Played**: Timestamp of most recent game completion
-- **Leaderboard**: Top 10 high scorers displayed in settings
+
+- **High Score**: best overall score (see [Scoring System](#scoring-system))
+- **Games Started**: games that reached turn 2
+- **Games Played**: games that reached an end state (win or loss)
+- **Last Played**: timestamp of the most recent completed game
+- **Leaderboard**: top 10 high scores
 
 ## Game Rules and Behavior
 
-### Core Metrics (Mode-Dependent)
+### Core Metrics
 
-Players must balance interconnected metrics that vary by game mode. All metrics are capped at 0-100 during gameplay.
+All metrics range from 0 to 100 and are clamped to that range. The game ends in failure when any metric reaches 0 or below.
 
-**Product Development & Partnership & Support Modes**:
+**Movement Labs mode**
 
-1. **Staff Retention** (0-100)
-   - Reflects team morale, burnout, and retention
-   - Affected by work-life balance decisions, deadline pressure, workload
-   - Loss condition: ≤ 0 ("Too many key staff have left the organization...")
+1. **Staff Retention**: team morale, burnout, and retention
+2. **Revenue**: organizational financial sustainability
+3. **Net Votes**: progress toward the mission and impact goals
+4. **Tech Debt**: platform stability and technical health. Each turn it decreases by `round((revenue + net_votes) / 200)`.
 
-2. **Partner Retention** (0-100)
-   - Measures existing customer satisfaction and renewal rates
-   - Affected by product quality, support responsiveness, feature prioritization
-   - Loss condition: ≤ 0 ("Too many partners have chosen not to renew...")
+**Product Development and Partnership & Support modes**
 
-3. **Partner Growth** (0-100)
-   - Tracks new customer acquisition and market expansion
-   - Affected by new feature development, market positioning, reputation
-   - Loss condition: ≤ 0 ("We're not making enough progress toward our vision...")
+1. **Staff Retention**
+2. **Partner Retention**: existing customer satisfaction and renewals
+3. **Partner Growth**: new customer acquisition and market expansion
+4. **Tech Debt**: each turn it decreases by `round((partner_growth + partner_retention) / 200)`.
 
-4. **Tech Debt** (0-100)
-   - Represents platform stability, maintainability, and technical health
-   - **Auto-decays** each turn by: `round((partner_growth + partner_retention) / 200)`
-   - Higher partner activity = faster tech debt accumulation
-   - Loss condition: ≤ 0 ("Tech debt has overwhelmed the platform...")
-
-**Movement Labs Mode**:
-
-1. **Staff Retention** (0-100) - Same as above
-
-2. **Revenue** (0-100)
-   - Tracks organizational financial sustainability
-   - Loss condition: ≤ 0 ("Revenue has dried up...")
-
-3. **Net Votes** (0-100)
-   - Measures progress toward mission and impact goals
-   - Loss condition: ≤ 0 ("We're not making enough progress toward our mission...")
-
-4. **Tech Debt** (0-100)
-   - **Auto-decays** each turn by: `round((revenue + net_votes) / 200)`
-   - Loss condition: ≤ 0 ("Tech debt has overwhelmed the platform...")
+Higher scores on the other metrics therefore erode tech debt faster.
 
 ### Turn Progression
 
-Each turn follows this sequence:
-
-1. **Turn counter increments**
-2. **Tech debt auto-adjustment** (based on partner metrics)
-3. **Scenario selection**:
-   - 75% chance: Decision scenario from shuffled queue
-   - 25% chance: Informational scenario from shuffled queue
-   - Queues auto-refresh when exhausted (re-shuffled)
-4. **Metric updates** (for informational scenarios) or player decision
-5. **Status check** for win/loss conditions
+1. The turn counter increments.
+2. Tech debt is adjusted.
+3. A scenario is selected. An informational scenario is shown with 20% probability (never on turn 1, never twice in a row); otherwise a decision scenario is shown. Each type is drawn from its own shuffled queue, which is reshuffled when exhausted.
+4. Informational scenarios apply their effects immediately; decision scenarios wait for the player's Yes/No answer.
+5. Win and loss conditions are checked.
 
 ### Metric Variation
 
-All metric changes are modified by a difficulty-based variation range:
+Every metric change is scaled by a random factor drawn from the difficulty's variation range:
+
 ```python
-actual_change = base_change * random.uniform(*variation_range)
+actual_change = int(base_change * random.uniform(*variation_range))
 ```
 
-This creates unpredictability where the same decision can have different magnitudes of effect.
+The same decision can therefore have different magnitudes of effect.
 
 ### Win Conditions
 
 Players win by achieving **either**:
-1. **Survival Victory**: Reaching Turn 25 without any metric hitting ≤ 0
-2. **Thriving Victory**: After Turn 10, having all non-tech_debt metrics at 100 (exactly)
+
+1. **Survival Victory**: reach turn 25 with no metric at or below 0.
+2. **Thriving Victory**: from turn 10 onward, every non-tech-debt metric at 100.
 
 ### Loss Conditions
 
-Game ends immediately when **any** metric drops to ≤ 0 with specific failure messages for each. If multiple metrics fail simultaneously, all failure messages are displayed separated by line breaks.
+The game ends immediately when any metric drops to 0 or below, with a message specific to that metric. If several metrics fail at once, all messages are shown. Failures take priority over wins.
 
-### Scenario Queue Management
+### Scenario Selection
 
-- Decision and informational scenarios are loaded separately from the database
-- Filtered by selected mode and community scenario toggle
-- Shuffled on game initialization
-- Scenarios pop from front of queue; queue refreshes when empty
-- Prevents immediate repetition while ensuring variety
+- Scenarios are loaded from the database, filtered by the selected mode and the community toggle.
+- Queues are shuffled at game start and refilled when empty, preventing immediate repetition.
+
+## Gameplay Examples
+
+### Decision Scenario
+
+**Scenario**: "A feature is taking longer than anticipated. Push the team to hit the projected timeline?" (Product Development mode)
+
+**If Yes**:
+- Staff Retention: -35 (scaled by the variation range)
+
+**If No**:
+- Staff Retention: +25
+- Partner Growth: -15
+- Partner Retention: -15
+
+### Informational Scenario
+
+**Scenario**: "Amazon Web Services outage - the platform went down for 24h."
+
+- Partner Retention: -25 (scaled by the variation range)
+- No player choice; metrics update immediately and the player clicks "Next".
+
+### Tech Debt Decay (Product Development mode)
+
+With Partner Growth 100, Partner Retention 80, and Tech Debt 100:
+
+```python
+debt_factor = round((100 + 80) / 200)   # round(0.9) = 1
+new_tech_debt = max(0, 100 - 1)         # 99
+```
+
+### Survival Victory
+
+On turn 25 with Staff Retention 45, Partner Growth 30, Partner Retention 60, Tech Debt 20, the player wins: "You've survived 25 turns and avoided any major issues."
+
+### Thriving Victory
+
+On turn 12 with Staff Retention, Partner Growth, and Partner Retention all at 100 (Tech Debt 40), the player wins: "Well into the game, all key metrics are at 100. You're thriving!"
+
+## Scoring System
+
+Scores are calculated in `routes/game.py` when a game ends.
+
+| Component | Value |
+|-----------|-------|
+| Difficulty score | Normal 50, Hard 75, Crazy 100 |
+| Turns score | `min(turns_survived / 25 * 100, 100)` |
+| Win bonus | 100 if the game was won, otherwise 0 |
+| Points score | Sum of the final non-tech-debt metrics (each clamped to 0-100), divided by 4 |
+
+```python
+overall_score = (2 * difficulty_score + turns_score + win_bonus + points_score) / 5
+```
+
+Difficulty carries a 40% weight; turns, win bonus, and points carry 20% each.
 
 ## Tech Stack
 
-### Backend
-- **Flask 3.0.3**: Web framework and routing
-- **SQLAlchemy 2.0.31**: ORM for database operations
-- **Flask-SQLAlchemy 3.1.1**: SQLAlchemy integration
-- **Flask-Login 0.6.3**: Session management and authentication
-- **Flask-Migrate**: Alembic-based database migrations
-- **Flask-WTF 1.2.1**: CSRF protection for forms and AJAX requests
-- **Bcrypt 3.2.0**: Password hashing (using `bcrypt.hashpw` and `bcrypt.checkpw`)
-- **Authlib**: OAuth 2.0 client implementation for Google authentication
-- **Python-dotenv 0.19.2**: Environment variable management
+- **Backend**: Python 3.12, Flask 3.0.3, Flask-SQLAlchemy 3.1.1 with SQLAlchemy 2.0.x (pinned `<2.1`), Flask-Migrate (Alembic), Flask-Login 0.6.3, Flask-WTF 1.2.1 (CSRF), bcrypt 3.2.0, Authlib (Google OAuth), python-dotenv 0.19.2, gunicorn 22.0.0
+- **Frontend**: vanilla JavaScript single-page app, Tailwind CSS 2.2.19 (CDN), Press Start 2P font (Google Fonts), Font Awesome 6 (CDN), Tenor embeds for animated GIFs
+- **Database**: PostgreSQL in production (Neon, via the Vercel Marketplace) with psycopg2-binary 2.9.9; SQLite locally by default
+- **Hosting**: Vercel (serverless Python, Flask framework preset in `vercel.json`)
 
-### Frontend
-- **Vanilla JavaScript**: Single-page application logic (no framework)
-- **Tailwind CSS 2.2.19** (CDN): Utility-first styling
-- **Press Start 2P** (Google Fonts): Retro gaming font for headers
-- **Font Awesome 6.0**: Icons for UI elements
-- **Tenor Embed API**: Animated GIF integration for game states
-
-### Database
-- **PostgreSQL** (production via Neon, provisioned through the Vercel Marketplace)
-- **SQLite** (local development fallback)
-- **Psycopg2-binary 2.9.9**: PostgreSQL adapter
-
-### Deployment
-- **Vercel**: Serverless Python hosting (`vercel.json` sets the Flask preset)
-- **Python 3.12**: Runtime (specified in `.python-version`)
-- Live at https://oregonizertrail.vercel.app (the old oregonizertrail.org domain and Heroku app are retired)
+Exact dependency pins are in `requirements.txt`.
 
 ## Architecture and Code Organization
 
 ### File Structure
 
 ```
-oregonizer_trail/
-├── app.py                      # Main Flask application and blueprint registration
-├── game_logic.py               # Core game engine (developmentGame class)
-├── models.py                   # SQLAlchemy models (User, Scenario, Rating)
-├── config.py                   # Configuration class (database URI, secret key)
-├── mode_config.py              # Game mode configuration and metrics
-├── validation.py               # Input validation module for API endpoints
-├── scenarios.py                # Legacy scenario definitions (class-based, mostly unused)
-├── utilities.py                # Helper functions (password hashing)
+.
+├── app.py                      # Flask app: config, extensions, OAuth, game persistence, blueprint registration
+├── game_logic.py               # Game engine (developmentGame class)
+├── models.py                   # SQLAlchemy models (User, Scenario, GameState)
+├── config.py                   # Config class (database URI, secret key)
+├── mode_config.py              # Game modes and their metrics
+├── validation.py               # Input validation for API endpoints
+├── populate_scenarios.py       # Loads scenarios_*.csv into the database
+├── scenarios_*.csv             # Scenario data, one file per mode
+├── scenarios.py, utilities.py  # Helper modules not imported by the app
+├── routes/
+│   ├── auth.py                 # Email/password login, logout, auth check
+│   ├── oauth.py                # Google OAuth
+│   ├── game.py                 # reset, next turn, handle scenario, end game and scoring
+│   ├── settings.py             # Difficulty, mode, community toggle
+│   ├── data.py                 # User info, leaderboard, modes, mode metrics
+│   └── scenarios.py            # Community scenario creation
+├── migrations/                 # Alembic migrations
+├── templates/index.html        # Single-page frontend
+├── static/                     # game.js, CSS, icons, terms and privacy text
+├── test_*.py                   # unittest suite
+├── deploy.sh                   # Test, push, migrate, and deploy script
+├── vercel.json                 # Vercel config
 ├── requirements.txt            # Python dependencies
-├── vercel.json                 # Vercel config (Flask framework preset)
-├── .python-version             # Python version for Vercel
-├── .vercelignore               # Files excluded from Vercel uploads
-├── .env                        # Environment variables (not committed)
 ├── .env.example                # Environment variable template
-├── routes/                     # Flask blueprint routes (modular organization)
-│   ├── auth.py                # Email/password authentication routes
-│   ├── oauth.py               # Google OAuth routes
-│   ├── game.py                # Game state routes (reset, next_turn, end_game)
-│   ├── settings.py            # Difficulty/mode/community settings routes
-│   ├── data.py                # Data retrieval routes (leaderboard, modes, metrics)
-│   └── scenarios.py           # Scenario creation and rating routes
-├── migrations/                 # Alembic database migration scripts
-├── templates/
-│   └── index.html             # Single-page frontend application
-├── static/
-│   ├── js/
-│   │   └── game.js            # Frontend game logic
-│   └── [assets]               # Favicons, terms, privacy
-├── scenarios_*.csv             # Mode-specific scenario data files
-├── LICENSE                     # GPL v3 license
-├── CONTRIBUTING.md             # Contribution guidelines
-└── archive/                    # Archived utility scripts (user/scenario management)
+├── CONTRIBUTING.md
+└── LICENSE
 ```
 
-### Core Architecture Patterns
+### Game State Persistence
 
-#### 1. Per-User Game Instances (app.py:75-114)
-```python
-_game_instances = {}
+Serverless instances do not share memory, so each player's in-progress game is stored in the `game_state` table, keyed `user_<id>` (or `temp_<session id>` for unauthenticated sessions):
 
-def get_game():
-    """Get or create a game instance for the current user"""
-    if not current_user.is_authenticated:
-        # Session-based game for unauthenticated users
-        session_id = session.get('temp_session_id')
-        if not session_id:
-            session_id = str(uuid.uuid4())
-            session['temp_session_id'] = session_id
-        user_key = f"temp_{session_id}"
-    else:
-        # User ID-based game for authenticated users
-        user_key = f"user_{current_user.id}"
+- `get_game()` in `app.py` rebuilds the game with `developmentGame.from_state()` once per request and caches it on `flask.g`.
+- An `after_request` hook saves `to_state()` back to the database.
+- Scenarios are serialized as IDs. Any new game attribute must be added to both `to_state()` and `from_state()` in `game_logic.py`.
+- Logging out deletes the user's saved game.
 
-    if user_key not in _game_instances:
-        _game_instances[user_key] = developmentGame()
+### Scenario Storage
 
-    return _game_instances[user_key]
-```
-- Each user gets their own independent `developmentGame` instance
-- Game instances keyed by user ID (authenticated) or session ID (temp)
-- **Supports concurrent multi-user play** - users don't interfere with each other
-- Game instances cleared on logout to prevent memory leaks
-- `clear_game()` function removes user's game instance when resetting
+Scenarios live in the `scenario` table, not in code. `populate_scenarios.py` loads every `scenarios_*.csv` file, replacing all non-community scenarios and leaving community scenarios untouched. Metrics and responses are stored as JSON strings and decoded at runtime.
 
-#### 2. Input Validation and Security (validation.py)
-- **CSRF Protection**: Flask-WTF protects all POST/PUT/DELETE requests
-- **Input Validation**: Comprehensive validation on all critical endpoints
-  - `/set_difficulty`: Validates difficulty is one of ['Normal', 'Hard', 'Crazy']
-  - `/end_game`: Validates turns_survived (0-1000), difficulty, all metrics (0-200)
-  - `/create_scenario`: Validates name, mode, type, text, metrics JSON, response JSON
-- **Mode-Aware Validation**: Metrics validated against current mode's metric list
-- **Environment Variables**: OAuth credentials and secret key loaded from environment
-- **Descriptive Errors**: Validation failures return 400 with clear error messages
+Decision scenario metrics:
 
-#### 3. Database-Driven Scenarios
-- Scenarios stored in PostgreSQL/SQLite, not hardcoded
-- Loaded on game initialization/reset via SQLAlchemy queries
-- Metrics and responses stored as JSON strings, deserialized at runtime
-- Legacy `scenarios.py` contains class-based definitions (mostly for reference/import)
-
-#### 4. JSON Metric Storage
-
-**Decision Scenario Metrics** (app.py:428-442):
-```python
-metrics = {
-    "yes": {
-        "staff_retention": -35,
-        "partner_growth": 0,
-        "partner_retention": -15,
-        "tech_debt": 20
-    },
-    "no": {
-        "staff_retention": 25,
-        "partner_growth": -15,
-        "partner_retention": -10,
-        "tech_debt": 0
-    }
+```json
+{
+  "yes": {"staff_retention": -35, "partner_growth": 0, "partner_retention": -15, "tech_debt": 20},
+  "no":  {"staff_retention": 25, "partner_growth": -15, "partner_retention": -10, "tech_debt": 0}
 }
 ```
 
-**Informational Scenario Metrics** (app.py:444-449):
-```python
-metrics = {
-    "staff_retention": -20,
-    "partner_growth": 10,
-    "partner_retention": -5,
-    "tech_debt": 15
-}
+Informational scenario metrics:
+
+```json
+{"staff_retention": -20, "partner_growth": 10, "partner_retention": -5, "tech_debt": 15}
 ```
 
-#### 5. Frontend-Backend Communication
-- RESTful JSON API endpoints
-- Fetch API with CSRF token injection for all HTTP requests
-- `fetchWithCSRF()` helper automatically adds X-CSRFToken header
-- No page reloads; fully dynamic UI updates
-- State managed in JavaScript `gameState` variable
+Decision scenarios also carry a `response` JSON object with `yes` and `no` message strings.
 
-#### 6. Authentication Flow
+### Validation and Security
 
-**Email/Password** (app.py:75-92):
-1. POST to `/` with credentials
-2. Bcrypt password verification
-3. Flask-Login session creation
-4. JSON response with authentication status
+- CSRF protection (Flask-WTF) on all POST/PUT/DELETE requests; the frontend's `fetchWithCSRF()` adds the `X-CSRFToken` header.
+- `validation.py` checks request input and returns 400 with a descriptive message on failure:
+  - `/set_difficulty` and `/end_game`: difficulty must be `Normal`, `Hard`, or `Crazy`; `turns_survived` an integer from 0 to 1000; metric values 0-200.
+  - `/create_scenario`: name (up to 200 characters), mode (must be enabled), type (`decision` or `informational`), text (up to 5000 characters), metrics JSON (only the mode's metrics, each value between -100 and 100), and a `yes`/`no` response JSON for decision scenarios.
+- Passwords are hashed with bcrypt.
+- Secrets come from environment variables.
 
-**Google OAuth** (app.py:121-140):
-1. GET `/login/google` initiates OAuth flow
-2. Google redirects to `/authorize`
-3. Token exchange and user info fetch
-4. User.get_or_create() auto-creates account
-5. Flask-Login session creation
+### Authentication Flow
 
-## State Management
+- **Email/password**: credentials are POSTed to `/` or `/login`, checked with bcrypt, and a Flask-Login session is created.
+- **Google OAuth**: `/login/google` starts the flow, Google redirects to `/authorize`, and `User.get_or_create()` creates the account on first sign-in.
 
-### Game State (game_logic.py)
+### Routes
 
-The `developmentGame` class maintains all game state with dynamic metrics based on mode:
-
-```python
-class developmentGame:
-    def __init__(self):
-        from mode_config import get_default_mode
-        self.difficulty = "Normal"
-        self.mode = get_default_mode()  # Dynamically set from mode_config.py
-        self.variation_range = (0.8, 1.25)
-        self.include_community_scenarios = False
-        # Metrics - stored in dictionary, varies by mode
-        self.metrics = {}  # e.g., {'staff_retention': 100, 'revenue': 100, ...}
-        # State
-        self.turns_survived = 0
-        self.status = "developing"
-        self.current_scenario = None
-        # Scenario queues
-        self.decision_scenarios = []
-        self.informational_scenarios = []
-        self.decision_scenarios_queue = []
-        self.informational_scenarios_queue = []
-```
-
-**Dynamic Metrics System**:
-- Metrics are stored in `self.metrics` dictionary
-- Available metrics determined by current mode (via `mode_config.py`)
-- Metrics automatically initialized based on difficulty level
-- All metric changes clamped to 0-100 range during gameplay
-
-### State Transitions
-
-1. **Initialization**: `reset_game()` → sets initial values → loads scenarios
-2. **Game Start**: First `next_turn()` call with `isFirstTurn=true`
-3. **Mid-Game**: Repeated `next_turn()` → `handle_scenario()` → metric updates
-4. **End State**: Win/loss condition met → `endGame()` → score calculation
-
-### Session Management
-
-- **Flask Session**: Server-side session storage for authenticated users
-- **Flask-Login**: `current_user` proxy for accessing logged-in user
-- **@login_required**: Decorator protecting authenticated-only routes
-- **Session Clear**: Explicit `session.clear()` on logout (app.py:146)
-
-### Frontend State (index.html:746)
-
-```javascript
-let gameState = "initial";  // States: "initial", "mid", "win", "failure"
-let turnIncremented = false; // Prevents double-incrementing turns
-```
-
-## User Management and Data
-
-### User Model (models.py:11-34)
-
-```python
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(128), unique=True, nullable=False)
-    password = db.Column(db.String(128), nullable=True)  # Nullable for OAuth users
-    high_score = db.Column(db.Integer, default=0)
-    games_played = db.Column(db.Integer, default=0)
-    games_started = db.Column(db.Integer, default=0)
-    last_game_played = db.Column(db.DateTime, default=None)
-```
-
-### User Statistics Tracking
-
-**Games Started** (app.py:169-182):
-- Increments when player reaches Turn 2
-- Tracks user engagement beyond initial curiosity
-
-**Games Played** (app.py:318):
-- Increments on `/end_game` endpoint call
-- Represents completed games (win or loss)
-
-**High Score** (app.py:314-315):
-- Automatically updates if new score exceeds previous
-- Composite score calculation (see Scoring System)
-
-**Last Game Played** (app.py:319):
-- Timestamp of most recent game completion
-- Uses `datetime.utcnow()`
-
-### OAuth User Creation (models.py:23-34)
-
-```python
-@staticmethod
-def get_or_create(user_info):
-    email = user_info['email']
-    user = User.query.filter_by(email=email).first()
-    if not user:
-        user = User(
-            email=email,
-            password=bcrypt.hashpw(user_info['sub'].encode(), bcrypt.gensalt()).decode()
-        )
-        db.session.add(user)
-        db.session.commit()
-    return user
-```
+| Blueprint | Routes |
+|-----------|--------|
+| `routes/auth.py` | `/`, `/login`, `/logout`, `/check_auth` |
+| `routes/oauth.py` | `/login/google`, `/authorize` |
+| `routes/game.py` | `/reset_game`, `/next_turn`, `/handle_scenario`, `/end_game` |
+| `routes/settings.py` | `/set_difficulty`, `/set_mode`, `/set_include_community_scenarios` |
+| `routes/data.py` | `/get_user_info`, `/get_leaderboard`, `/get_modes`, `/get_mode_metrics` |
+| `routes/scenarios.py` | `/create_scenario` |
 
 ## Database Schema
 
-### Tables
+### user
 
-#### User
 | Column | Type | Constraints |
 |--------|------|-------------|
-| id | Integer | Primary Key |
-| email | String(128) | Unique, Not Null |
-| password | String(128) | Nullable (for OAuth) |
-| high_score | Integer | Default: 0 |
-| games_played | Integer | Default: 0 |
-| games_started | Integer | Default: 0 |
-| last_game_played | DateTime | Default: None |
+| id | Integer | Primary key |
+| email | String(128) | Unique, not null |
+| password | String(128) | Nullable |
+| high_score | Integer | Default 0 |
+| games_played | Integer | Default 0 |
+| games_started | Integer | Default 0 |
+| last_game_played | DateTime | Default none |
 
-#### Scenario
+### scenario
+
 | Column | Type | Constraints |
 |--------|------|-------------|
-| id | Integer | Primary Key |
-| name | String(128) | Unique, Not Null |
-| mode | String(128) | Not Null |
-| type | String(128) | Not Null ('decision' or 'informational') |
-| text | Text | Not Null |
-| metrics | Text | Not Null (JSON string) |
+| id | Integer | Primary key |
+| name | String(128) | Unique, not null |
+| mode | String(128) | Not null |
+| type | String(128) | Not null (`decision` or `informational`) |
+| text | Text | Not null |
+| metrics | Text | Not null (JSON string) |
 | response | Text | Nullable (JSON string, decision scenarios only) |
-| community | Boolean | Default: False |
+| community | Boolean | Default false |
 
-#### Rating
+### game_state
+
 | Column | Type | Constraints |
 |--------|------|-------------|
-| id | Integer | Primary Key |
-| user_id | Integer | Foreign Key → User.id, Not Null |
-| scenario_id | Integer | Foreign Key → Scenario.id, Not Null |
-| is_response | Boolean | Default: False |
-| rating | Integer | Not Null (1 or -1) |
-| submitted_at | DateTime | Default: datetime.utcnow |
+| id | Integer | Primary key |
+| user_key | String(128) | Unique, not null |
+| state | Text | Not null (JSON from `developmentGame.to_state()`) |
+| updated_at | DateTime | Default now, updated on change |
 
-### Relationships
-- User ← (1:many) → Rating
-- Scenario ← (1:many) → Rating
+Schema changes go through Alembic: `flask db migrate -m "description"` then `flask db upgrade`.
 
-## Build and Deployment
+## Getting Started
 
-### Local Development
+Prerequisites: Python 3.12 and git. PostgreSQL is optional; local development uses SQLite by default.
 
-1. **Install Dependencies**
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# 1. Clone and install
+git clone https://github.com/nbramia/oregonizer-trail.git
+cd oregonizer-trail
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-2. **Configure Environment**
-Create `.env` file:
-```
-DATABASE_URL=postgresql://localhost/oregonizer_trail
-GOOGLE_REDIRECT_URI=http://localhost:5001/authorize
-```
+# 2. Configure (see Configuration below)
+cp .env.example .env
+# edit .env: set Google OAuth credentials if you want Google sign-in
 
-3. **Initialize Database**
-```bash
-python create_db.py
+# 3. Create the schema and load scenarios
 flask db upgrade
-python populate_scenarios.py  # Load scenario data
+python populate_scenarios.py
+
+# 4. Run
+python app.py                    # http://localhost:5001
 ```
 
-4. **Run Development Server**
+`python app.py` listens on port 5001 unless `PORT` is set. Accounts are created on first Google sign-in, so Google OAuth credentials are needed to sign in locally.
+
+## Configuration
+
+The app reads these environment variables. Locally, put them in a `.env` file at the repo root (gitignored; `.env.example` is the template). In production they are set in the Vercel project.
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `DATABASE_URL` | No | Database connection string. `app.py` reads it after `load_dotenv()`; if unset, the app uses SQLite at `sqlite:///app.db`. A `postgres://` scheme is rewritten to `postgresql://`. |
+| `SECRET_KEY` | Production | Flask session key. If unset, a random key is generated per process, which breaks sessions across serverless instances. Generate one with `python3 -c "import os; print(os.urandom(24).hex())"`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | For Google sign-in | OAuth 2.0 client credentials. |
+| `GOOGLE_REDIRECT_URI` | For Google sign-in | OAuth callback. Locally `http://localhost:5001/authorize`; in production `https://oregonizertrail.vercel.app/authorize`. Must match an authorized redirect URI on the OAuth client. |
+| `BASE_DOMAIN` | No | If set, requests whose host equals it are redirected (301) to `https://www.<BASE_DOMAIN>`. |
+
+### Database
+
+The app and the migrations both take the database from `DATABASE_URL`. `migrations/env.py` reads the URL from the Flask app's engine, so `alembic.ini` holds no URL. In production, Vercel's Neon integration provides `DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED`; `deploy.sh` runs migrations with `DATABASE_URL_UNPOOLED`.
+
+### Google OAuth Setup
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create or select a project.
+2. Configure the OAuth consent screen.
+3. Under Credentials, create an OAuth client ID of type Web application.
+4. Add authorized redirect URIs: `http://localhost:5001/authorize` and your production `/authorize` URL.
+5. Put the client ID and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+
+Never commit credentials; `.env` is gitignored.
+
+## Testing
+
 ```bash
-python app.py
-# Runs on http://0.0.0.0:5001
+python3 -m unittest discover -s . -p "test_*.py"
 ```
 
-### Production Deployment (Vercel)
+Tests use an in-memory SQLite database. **Never run the tests with `DATABASE_URL` pointing at production**: the tests switch to SQLite only after `app` is imported, so they would write to the real database. Run them with `DATABASE_URL` unset (for example `env -u DATABASE_URL python3 -m unittest discover -s . -p "test_*.py"`).
 
-**Hosting**: Vercel project `oregonizertrail` (team `nathan-ramias-projects`), served at https://oregonizertrail.vercel.app. The GitHub repo is *not* connected to Vercel; deploys go out from the local checkout via the Vercel CLI.
+Many tests assume the Product Development mode is the default, but only Movement Labs is enabled, so a number of tests currently fail.
 
-**Database**: Neon Postgres (`oregonizertrail-db`), attached through the Vercel Marketplace, which injects `DATABASE_URL` / `DATABASE_URL_UNPOOLED` into the project env.
+Manual checks worth running after changes: sign in with Google, play each difficulty, confirm informational scenarios and win/loss messages, create a community scenario and toggle community scenarios, and confirm `games_started`, `games_played`, high score, and the leaderboard update.
 
-**Environment Variables** (Vercel → Settings → Environment Variables, Production):
-- `DATABASE_URL`, `DATABASE_URL_UNPOOLED` (from the Neon integration)
-- `SECRET_KEY` (required: serverless instances must share one key or sessions break)
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_REDIRECT_URI=https://oregonizertrail.vercel.app/authorize`
+## Deployment
 
-The Google OAuth client lives in the `oregonizer-trail` Google Cloud project (nbramia@gmail.com). Its authorized redirect URIs must include the URI above.
+Production runs on Vercel at https://oregonizertrail.vercel.app, with a Neon Postgres database attached through the Vercel Marketplace. The GitHub repo is not connected to Vercel; deploys go out from a local checkout with the Vercel CLI.
 
-**Serverless game state**: Vercel doesn't keep process memory between requests, so each user's in-progress game is serialized (`developmentGame.to_state()`) into the `game_state` table after every request and rebuilt (`from_state()`) on the next one.
+**Vercel environment variables** (Production): `DATABASE_URL`, `DATABASE_URL_UNPOOLED` (from the Neon integration), `SECRET_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI=https://oregonizertrail.vercel.app/authorize`.
 
-**Deployment Process**:
+**Deploy**:
+
 ```bash
-./deploy.sh "Your commit message describing the changes"
-
-# The script:
-# 1. Runs all tests (aborts if any fail)
-# 2. Commits and pushes to GitHub
-# 3. Pulls production env from Vercel, runs `flask db upgrade` and
-#    `populate_scenarios.py` against Neon (Heroku's old release phase)
-# 4. Runs `vercel deploy --prod`
+./deploy.sh "Commit message"
 ```
+
+`deploy.sh`:
+
+1. Runs the test suite and aborts if it fails.
+2. Commits all changes and pushes to `main` on GitHub.
+3. Pulls the production environment with `vercel env pull`, then runs `flask db upgrade` and `populate_scenarios.py` against `DATABASE_URL_UNPOOLED`.
+4. Runs `vercel deploy --prod`.
 
 **Manual**:
+
 ```bash
 vercel env pull /tmp/prod.env --environment=production --yes
 export DATABASE_URL=$(grep '^DATABASE_URL_UNPOOLED=' /tmp/prod.env | cut -d= -f2- | tr -d '"')
@@ -561,443 +435,28 @@ unset DATABASE_URL; rm /tmp/prod.env
 vercel deploy --prod
 ```
 
-**Warning**: never run the test suite with `DATABASE_URL` pointing at production. The tests swap to SQLite only after `app` is imported, so they would write to (and `drop_all` on) the real database.
-
-### Database Connection Logic (app.py:28-36)
-
-```python
-database_url = os.environ.get('DATABASE_URL')
-if database_url:
-    database_url = database_url.replace("postgres://", "postgresql://")
-else:
-    database_url = 'sqlite:///app.db'
-
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-```
-
-- Some providers (e.g. Heroku) supply `DATABASE_URL` with a `postgres://` scheme
-- SQLAlchemy 2.x requires `postgresql://` scheme
-- Automatic replacement for compatibility
-- Falls back to SQLite for local development without env var
-
-## Development Workflow
-
-### Utility Scripts
-
-**User Management**:
-- `create_user.py`: Create single user interactively
-- `create_many_users.py`: Bulk user creation
-- `delete_user.py`: Delete user by email
-- `clear_users.py`: Delete all users
-
-**Scenario Management**:
-- `populate_scenarios.py`: Load scenarios from scenarios.py into database
-- `create_scenario.py`: Interactive scenario creation
-- `delete_scenario.py`: Delete scenario by name
-- `delete_all_scenarios.py`: Clear all scenarios
-- `update_scenario_metrics.py`: Modify existing scenario metrics
-
-**Database**:
-- `create_db.py`: Initialize database tables (legacy, use Flask-Migrate)
-- `manage.py`: Flask-Migrate management script
-
-### Testing Workflow
-
-1. **Test Authentication**:
-   - Email/password login
-   - Google OAuth login
-   - Logout and session clearing
-
-2. **Test Game Flow**:
-   - Start game with each difficulty level
-   - Play through decision scenarios
-   - Verify informational scenarios trigger
-   - Test win/loss conditions
-
-3. **Test Scenario Handling**:
-   - Verify metric changes apply correctly
-   - Check variation ranges affect outcomes
-   - Confirm tech debt auto-decay
-
-4. **Test Community Features**:
-   - Create custom scenario
-   - Toggle community scenarios on/off
-   - Rate scenarios and responses
-
-5. **Test Statistics**:
-   - Verify games_started increments at Turn 2
-   - Confirm games_played increments on end_game
-   - Check high_score updates correctly
-   - Review leaderboard accuracy
-
-## Environment Configuration
-
-### Required Environment Variables
-
-**DATABASE_URL**:
-- Format: `postgresql://user:password@host:port/database`
-- Vercel's Neon integration auto-provides this (plus `DATABASE_URL_UNPOOLED`, used for migrations)
-- Local: Set in `.env` file
-
-**SECRET_KEY**:
-- Flask session secret key
-- Generate with: `python -c "import os; print(os.urandom(24).hex())"`
-- Must be set for production to persist sessions across deploys
-- Fallback: Auto-generates on startup (sessions lost on restart)
-
-**GOOGLE_CLIENT_ID**:
-- OAuth 2.0 Client ID from Google Cloud Console
-- Required for Google Sign-In functionality
-- Get from: https://console.cloud.google.com/
-
-**GOOGLE_CLIENT_SECRET**:
-- OAuth 2.0 Client Secret from Google Cloud Console
-- Required for Google Sign-In functionality
-- Keep confidential - never commit to source control
-
-**GOOGLE_REDIRECT_URI**:
-- Local: `http://localhost:5001/authorize`
-- Production: `https://www.oregonizertrail.org/authorize`
-- Must match Google OAuth Console configuration
-
-### Setting Environment Variables
-
-**Local Development (.env file)**:
-```bash
-DATABASE_URL=postgresql://localhost/oregonizer_trail
-SECRET_KEY=your-secret-key-here
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=http://localhost:5001/authorize
-```
-
-**Heroku Production**:
-```bash
-heroku config:set SECRET_KEY="$(python -c 'import os; print(os.urandom(24).hex())')"
-heroku config:set GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-heroku config:set GOOGLE_CLIENT_SECRET="your-client-secret"
-heroku config:set GOOGLE_REDIRECT_URI="https://www.oregonizertrail.org/authorize"
-```
-
-### OAuth Configuration
-
-**Google Cloud Console Setup**:
-1. Go to https://console.cloud.google.com/
-2. Create or select a project
-3. Enable Google+ API
-4. Create OAuth 2.0 Client ID (Web application)
-5. Add authorized redirect URIs:
-   - Local: `http://localhost:5001/authorize`
-   - Production: `https://www.oregonizertrail.org/authorize`
-6. Copy Client ID and Client Secret
-7. Set as environment variables (see above)
-
-**Security Note**: All credentials are now loaded from environment variables. Never commit credentials to source control.
-
-## Gameplay Examples
-
-### Example Decision Scenario
-
-**Scenario**: "A feature is taking longer than anticipated. Push the team to hit the projected timeline?"
-
-**If Yes**:
-- Staff Retention: -35 (modified by variation range)
-- Message: "Pushed the team to hit the deadline. Staff retention decreased. Partner retention held steady."
-
-**If No**:
-- Staff Retention: +25 (modified)
-- Partner Growth: -15 (modified)
-- Partner Retention: -15 (modified)
-- Message: "Allowed delay. Staff retention increased, partner growth and retention slightly decreased."
-
-### Example Informational Scenario
-
-**Scenario**: "Amazon Web Services outage - the platform went down for 24h."
-
-**Automatic Effects**:
-- Partner Retention: -25 (modified by variation range)
-- No player choice; metrics updated immediately
-- Message displayed, player clicks "Next"
-
-### Tech Debt Auto-Decay Example
-
-**Turn Start**:
-- Partner Growth: 120
-- Partner Retention: 80
-- Tech Debt: 100
-
-**Calculation**:
-```python
-debt_factor = round((120 + 80) / 200)  # = round(1.0) = 1
-new_tech_debt = max(0, 100 - 1)  # = 99
-```
-
-**Result**: Tech debt decreases by 1 this turn
-
-### Win Scenario Example 1: Survival Victory
-
-**Turn 25 Status**:
-- Staff Retention: 45
-- Partner Growth: 30
-- Partner Retention: 60
-- Tech Debt: 20
-
-**Result**: "Congratulations! You've survived 25 turns and avoided any major issues."
-
-### Win Scenario Example 2: Thriving Victory
-
-**Turn 12 Status**:
-- Staff Retention: 110
-- Partner Growth: 105
-- Partner Retention: 115
-- Tech Debt: 40
-
-**Result**: "Congratulations! Well into the game, all key metrics are above 100. You're thriving!"
-
-## Scoring System
-
-### Score Calculation (routes/game.py:153-189)
-
-**Difficulty Score**:
-- Normal: 50 points
-- Hard: 75 points
-- Crazy: 100 points
-
-**Survival Score**:
-- Won (reached Turn 25 or thriving): 100 points
-- Lost: `min(4 * turns_survived, 100)`
-
-**Points Score**:
-- Average of all non-tech_debt metrics (capped at 0-100 each)
-- Varies by mode (number of metrics differs)
-
-**Overall Score** (Weighted):
-```python
-# Difficulty and Survival are double-weighted (40% each)
-# Points are single-weighted (20%)
-overall_score = (2 * difficulty_score + 2 * survival_score + points_score) / 5
-```
-
-This weighted formula emphasizes strategic difficulty selection and longevity over just maintaining high metrics.
-
-### Maximum Possible Score
-
-**Perfect Score = 100**:
-- Difficulty: Crazy (100)
-- Survival: Win (100)
-- Points: All metrics at 100 (100)
-- Overall: (2×100 + 2×100 + 100) / 5 = 100
-
-**Realistic High Score**:
-- Difficulty: Crazy (100)
-- Survival: 25 turns (100)
-- Points: Metrics averaging ~80 (~80)
-- Overall: (2×100 + 2×100 + 80) / 5 = 96
-
-## Game Constraints
-
-### Scenario Constraints
-- Decision scenarios: Metrics between -30 and 30 for each choice
-- Informational scenarios: Metrics between -30 and 30
-- Scenario names: Lowercase alphanumeric with underscores only
-- Scenario text: Required, no length limit
-- Response text: Required for decision scenarios
-
-### Gameplay Constraints
-- Minimum turns: 0 (can lose immediately on Turn 1)
-- Maximum tracked turns: 25 (auto-win)
-- Metrics: Capped at 0-100 during gameplay (automatically clamped)
-- Community scenarios: Must manually toggle to enable
-- Scenario queues: Auto-refresh when exhausted (no scenario limit)
-
-### Technical Constraints
-- **Multi-user Support**: ✅ Per-user game instances support concurrent gameplay
-- Session-based authentication: Server-side sessions required
-- Database: Requires PostgreSQL or SQLite
-- Frontend: No mobile app; web-only interface
-- CSRF Protection: All POST/PUT/DELETE requests require valid CSRF token
-
-## Code Patterns and Standards
-
-### Backend Patterns
-
-**Route Organization** (Flask Blueprints in routes/):
-- **Authentication** (routes/auth.py): `/`, `/login`, `/logout`
-- **OAuth** (routes/oauth.py): `/login/google`, `/authorize`
-- **Game** (routes/game.py): `/reset_game`, `/next_turn`, `/handle_scenario`, `/end_game`
-- **Settings** (routes/settings.py): `/set_difficulty`, `/set_mode`, `/set_include_community_scenarios`
-- **Data** (routes/data.py): `/get_user_info`, `/get_leaderboard`, `/get_modes`, `/get_mode_metrics`
-- **Scenarios** (routes/scenarios.py): `/create_scenario`, `/rate_scenario`, `/get_ratings`
-
-**Error Handling**:
-- Try-except blocks on all routes
-- Logging with `logging.debug()`, `logging.error()`, `logging.warning()`
-- JSON error responses with appropriate HTTP status codes
-- Input validation with descriptive 400 errors
-- CSRF validation on all state-changing requests
-
-**Database Patterns**:
-- SQLAlchemy ORM for all queries
-- Explicit `db.session.commit()` after mutations
-- JSON deserialization with `json.loads()` for metrics/responses
-- Filters by mode, type, and community flag on scenario queries
-
-### Frontend Patterns
-
-**State Management** (index.html JavaScript):
-- Global `gameState` variable for game phase
-- DOM manipulation for UI updates
-- Fetch API for all backend communication
-- Modal-based UI for settings, overlays, score details
-
-**UI Update Pattern**:
-```javascript
-fetch('/endpoint', { method: 'POST', body: data })
-  .then(response => response.json())
-  .then(data => {
-    updateMetrics(data.metrics);
-    displayScenario(data);
-  })
-  .catch(error => console.error(error));
-```
-
-**Metric Display**:
-- Health bar visualization (CSS width based on percentage)
-- Turn counter display
-- Color-coded status (green: #0dd635)
-
-### Responsive Design
-
-**Breakpoints**:
-- Mobile: < 496px (hide rating buttons, compact metrics)
-- Tablet: 496px - 768px (adjusted layout)
-- Desktop: > 768px (full layout)
-
-**Mobile Optimizations**:
-- Stacked metric bars with reduced size
-- Hidden rating buttons (space constraints)
-- Bottom-aligned mode/difficulty display
-- Responsive button positioning
-
 ## Troubleshooting
 
-### Common Issues
+**Database connection errors**: check `DATABASE_URL` in `.env`, or unset it to use SQLite. For a local PostgreSQL URL, confirm the server is running.
 
-**Database Connection Errors**:
-- Verify `DATABASE_URL` in `.env`
-- Check PostgreSQL service running locally
-- Confirm Heroku Postgres add-on provisioned
+**Missing tables**: run `flask db upgrade`.
 
-**OAuth Redirect Mismatch**:
-- Ensure `GOOGLE_REDIRECT_URI` matches Google Console
-- Verify redirect URI in OAuth client configuration
-- Check HTTP vs HTTPS protocol match
+**No scenarios appear**: run `python populate_scenarios.py`; confirm scenarios exist for the selected mode and that the community toggle matches what you expect.
 
-**Session Issues**:
-- Clear browser cookies
-- Verify `app.secret_key` is set (app.py:26)
-- Check Flask session configuration
+**OAuth redirect mismatch**: `GOOGLE_REDIRECT_URI` must exactly match an authorized redirect URI on the OAuth client, including `http` vs `https`.
 
-**Scenario Not Loading**:
-- Verify scenarios exist in database: `Scenario.query.all()`
-- Check mode filter matches selected mode
-- Confirm community scenario toggle state
-- Run `populate_scenarios.py` to load default scenarios
+**Sessions reset unexpectedly**: set `SECRET_KEY`. Without it, each process generates its own key.
 
-**Metrics Not Updating**:
-- Check browser console for JavaScript errors
-- Verify `/handle_scenario` endpoint returning metrics
-- Confirm `updateMetrics()` function executing
+**High score not saving**: the user must be signed in, and `/end_game` must succeed (check server logs for validation or database errors).
 
-**High Score Not Saving**:
-- Verify user authenticated (check `current_user.is_authenticated`)
-- Confirm `/end_game` endpoint called with correct data
-- Check database commit successful (no SQLAlchemy errors)
+**Metrics not updating**: check the browser console and the response from `/handle_scenario`.
 
-### Debug Mode
-
-**Enable Flask Debug Logging** (app.py:20):
-```python
-logging.basicConfig(level=logging.DEBUG)
-```
-
-**Run Flask Debug Server** (app.py:533-534):
-```python
-app.run(debug=True, host='0.0.0.0', port=5001)
-```
-
-### Database Inspection
-
-**Check User Data**:
-```python
-from app import app, db, User
-with app.app_context():
-    users = User.query.all()
-    for user in users:
-        print(f"{user.email}: {user.high_score} points, {user.games_played} games")
-```
-
-**Check Scenario Count**:
-```python
-from app import app, db, Scenario
-with app.app_context():
-    print(f"Decision: {Scenario.query.filter_by(type='decision').count()}")
-    print(f"Informational: {Scenario.query.filter_by(type='informational').count()}")
-    print(f"Community: {Scenario.query.filter_by(community=True).count()}")
-```
-
----
+Debug logging is enabled by default (`logging.basicConfig(level=logging.DEBUG)` in `app.py`).
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
-- Setting up a local development environment
-- Submitting bug reports and feature requests
-- Creating pull requests
-- Adding new game scenarios
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, issue and pull request guidelines, and how to add scenarios.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Quick Start Summary
-
-**For Local Development**:
-```bash
-# 1. Setup
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-
-# 2. Configure
-echo "DATABASE_URL=sqlite:///app.db" > .env
-echo "GOOGLE_REDIRECT_URI=http://localhost:5001/authorize" >> .env
-
-# 3. Database
-flask db upgrade
-python populate_scenarios.py
-
-# 4. Run
-python app.py
-# Navigate to http://localhost:5001
-```
-
-**For Heroku Deployment**:
-```bash
-# 1. Create app
-heroku create oregonizer-trail
-
-# 2. Add Postgres
-heroku addons:create heroku-postgresql
-
-# 3. Configure
-heroku config:set GOOGLE_REDIRECT_URI=https://oregonizer-trail.herokuapp.com/authorize
-
-# 4. Deploy
-git push heroku master
-
-# 5. Migrate and seed
-heroku run flask db upgrade
-heroku run python populate_scenarios.py
-```
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.

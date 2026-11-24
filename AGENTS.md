@@ -11,18 +11,22 @@ This file provides guidance to coding agents when working with code in this repo
 ### Application Structure
 - **app.py**: Main Flask application with routes, OAuth setup, and application initialization
 - **game_logic.py**: Core game engine (`developmentGame` class) managing game state, scenario selection, metric updates, and turn progression
-- **models.py**: SQLAlchemy models for User, Scenario, and Rating
-- **scenarios.py**: Legacy scenario definitions (older class-based format, largely superseded by database storage)
+- **models.py**: SQLAlchemy models for User, Scenario, and GameState
+- **routes/**: Flask blueprints (auth, oauth, game, settings, data, scenarios)
+- **mode_config.py**: Game modes (enabled/default flags) and each mode's metrics
+- **validation.py**: Input validation for API endpoints
+- **populate_scenarios.py**: Loads `scenarios_*.csv` into the database
+- **scenarios.py**, **utilities.py**: Helper modules the app does not import
 - **config.py**: Configuration class for database URI and secret key
 
 ### Database Models
 - **User**: Authentication (email/password or Google OAuth), game statistics (high_score, games_played, games_started)
 - **Scenario**: Game scenarios with name, mode, type (decision/informational), text, metrics (JSON), response (JSON), and community flag
-- **Rating**: User ratings (thumbs up/down) for scenarios and responses
+- **GameState**: Serialized in-progress game per user/session (see Game State Management)
 
 ### Game Logic Flow
 1. Game initialization sets difficulty-based starting values
-2. `next_turn()` increments turn counter, adjusts tech debt, selects scenario (75% decision, 25% informational)
+2. `next_turn()` increments turn counter, adjusts tech debt, selects a scenario (informational with 20% probability, never on turn 1 or twice in a row; otherwise decision)
 3. Scenario queues are shuffled and cycled to avoid repetition
 4. Metric changes are applied with difficulty-based variation ranges
 5. Status checks determine win/loss conditions
@@ -57,22 +61,11 @@ flask db upgrade
 flask db migrate -m "description"
 ```
 
-### User Management Utilities
+### Scenario Data
 ```bash
-python create_user.py      # Create single user
-python create_many_users.py # Bulk user creation
-python delete_user.py       # Delete user by email
-python clear_users.py       # Clear all users
+python populate_scenarios.py  # Replace non-community scenarios with the contents of scenarios_*.csv
 ```
-
-### Scenario Management Utilities
-```bash
-python populate_scenarios.py      # Populate scenarios from scenarios.py
-python create_scenario.py         # Interactive scenario creation
-python delete_scenario.py         # Delete scenario by name
-python delete_all_scenarios.py    # Clear all scenarios
-python update_scenario_metrics.py # Update existing scenario metrics
-```
+`create_db.py`, `manage.py`, `scenarios.py` and `utilities.py` are not part of the supported workflow; use `flask db upgrade` for the schema.
 
 ## Critical Implementation Details
 
@@ -83,17 +76,20 @@ python update_scenario_metrics.py # Update existing scenario metrics
 - Passwords hashed with bcrypt
 
 ### Environment Variables
-Required in `.env`:
-- `DATABASE_URL`: PostgreSQL connection string (auto-converts postgres:// to postgresql://)
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: OAuth client credentials
-- `GOOGLE_REDIRECT_URI`: OAuth callback URL (defaults to localhost:5001 for development)
+Locally, set these in a `.env` file at the repo root (gitignored; template in `.env.example`):
+- `DATABASE_URL`: optional; app.py reads it after `load_dotenv()` and rewrites `postgres://` to `postgresql://`. If unset, the app uses SQLite (`sqlite:///app.db`)
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`: OAuth client credentials (needed for Google sign-in)
+- `GOOGLE_REDIRECT_URI`: OAuth callback URL (defaults to `http://localhost:5001/authorize`)
 - `SECRET_KEY`: required in production (random per-process fallback breaks sessions on serverless)
+- `BASE_DOMAIN`: optional; redirects that bare host to `www.<BASE_DOMAIN>`
+
+On Nathan's machines the repo's `.env` is a symlink to `~/Code/Sync/envs/oregonizer-trail/.env` (Syncthing); put a local or standalone `DATABASE_URL` there.
 
 ### Database Connection
-Falls back to SQLite (`sqlite:///app.db`) if `DATABASE_URL` not set. Production uses Neon Postgres (via Vercel Marketplace). SQLAlchemy is pinned `<2.1` because 2.1 defaults `postgresql://` to the psycopg3 driver, and the app ships psycopg2.
+The app and the migrations both get the database from `DATABASE_URL`: `migrations/env.py` takes the URL from the Flask app's engine, so `alembic.ini` holds no URL. Falls back to SQLite (`sqlite:///app.db`) if unset. Production uses Neon Postgres (via Vercel Marketplace), which provides `DATABASE_URL` and `DATABASE_URL_UNPOOLED`; `deploy.sh` runs migrations with `DATABASE_URL_UNPOOLED`. SQLAlchemy is pinned `<2.1` because 2.1 defaults `postgresql://` to the psycopg3 driver, and the app ships psycopg2.
 
 ### Frontend Architecture
-Single-page application in `templates/index.html` with inline JavaScript. Communicates with backend via fetch API for game state, authentication, and scenario handling.
+Single-page application: `templates/index.html` plus `static/js/game.js`. Communicates with backend via fetch API for game state, authentication, and scenario handling.
 
 ### Scenario Data Structure
 Decision scenarios:
@@ -115,19 +111,19 @@ Each user's game is stored in the `game_state` table (keyed `user_<id>`), becaus
 ## Testing and Deployment
 
 ### Local Testing
-1. Ensure `.env` exists with `DATABASE_URL` and `GOOGLE_REDIRECT_URI`
-2. Run `python app.py`
+1. Ensure `.env` exists (copy `.env.example`); `DATABASE_URL` is optional (SQLite fallback)
+2. Run `flask db upgrade` and `python populate_scenarios.py`, then `python app.py`
 3. Navigate to `http://localhost:5001`
 4. Test authentication, game flow, scenario handling
 
 ### Deployment Notes
-- Hosted on Vercel: project `oregonizertrail`, live at https://oregonizertrail.vercel.app (Heroku app and oregonizertrail.org are gone)
+- Hosted on Vercel: project `oregonizertrail`, live at https://oregonizertrail.vercel.app
 - `vercel.json` sets the Flask preset; `.python-version` pins 3.12 (force-added, since .gitignore ignores it)
-- Deploy with `./deploy.sh "msg"`, which migrates and reseeds Neon (Heroku's old release phase) and then runs `vercel deploy --prod`. GitHub isn't connected to Vercel.
+- Deploy with `./deploy.sh "msg"`, which runs the tests, commits and pushes to `main`, migrates and reseeds Neon, and then runs `vercel deploy --prod`. GitHub isn't connected to Vercel.
 - Env vars live in Vercel: DATABASE_URL(_UNPOOLED), SECRET_KEY, GOOGLE_CLIENT_ID/SECRET, GOOGLE_REDIRECT_URI
 - Google OAuth client: GCP project `oregonizer-trail` (nbramia@gmail.com). Redirect URI must match the deployed domain.
 - NEVER run tests with DATABASE_URL set to production: tests switch to SQLite only after import and would hit the real DB
-- 40 of 83 tests fail on main because they assume the old "Product Development" default mode (only "Movement Labs" is enabled), so deploy.sh's test gate currently blocks
+- 40 of 83 tests fail on main because they assume "Product Development" is the default mode (only "Movement Labs" is enabled in `mode_config.py`), so deploy.sh's test gate currently blocks
 
 ## Working with Nathan's Preferences
 

@@ -85,8 +85,8 @@ def _game_key(create=True):
     """Return the storage key for the current user's game"""
     if current_user.is_authenticated:
         return f"user_{current_user.id}"
-    # For unauthenticated users, use a temporary session-based game
-    # (This shouldn't happen in practice since routes require login)
+    # Every game route requires login; this session-keyed fallback only
+    # applies if get_game() is ever called for an anonymous request
     session_id = session.get('temp_session_id')
     if not session_id:
         if not create:

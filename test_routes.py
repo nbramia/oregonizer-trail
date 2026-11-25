@@ -169,6 +169,7 @@ class TestRoutes(unittest.TestCase):
 
     def test_next_turn(self):
         """Test /next_turn endpoint"""
+        self._login()
         response = self.client.post('/next_turn')
 
         self.assertEqual(response.status_code, 200)
@@ -233,6 +234,7 @@ class TestRoutes(unittest.TestCase):
 
     def test_handle_scenario(self):
         """Test /handle_scenario endpoint"""
+        self._login()
         scenario = Scenario.query.filter_by(name='test_decision').first()
 
         response = self.client.post('/handle_scenario',
@@ -249,6 +251,7 @@ class TestRoutes(unittest.TestCase):
 
     def test_handle_scenario_invalid_id(self):
         """Test /handle_scenario with invalid scenario ID"""
+        self._login()
         response = self.client.post('/handle_scenario',
                                      data=json.dumps({
                                          'scenario': 99999,
@@ -260,6 +263,7 @@ class TestRoutes(unittest.TestCase):
 
     def test_handle_scenario_invalid_action(self):
         """Test /handle_scenario rejects actions other than yes/no"""
+        self._login()
         scenario = Scenario.query.filter_by(name='test_decision').first()
 
         response = self.client.post('/handle_scenario',
@@ -492,6 +496,7 @@ class TestRoutes(unittest.TestCase):
 
     def test_set_include_community_scenarios(self):
         """Test /set_include_community_scenarios endpoint"""
+        self._login()
         response = self.client.post('/set_include_community_scenarios',
                                      data=json.dumps({'include': True}),
                                      content_type='application/json')
@@ -499,6 +504,22 @@ class TestRoutes(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = json.loads(response.data)
         self.assertIn('message', data)
+
+    def test_game_routes_require_login(self):
+        """Playing requires a signed-in user and stores no anonymous game"""
+        from models import GameState
+        scenario = Scenario.query.filter_by(name='test_decision').first()
+        requests = [
+            ('/next_turn', None),
+            ('/handle_scenario', {'scenario': scenario.id, 'action': 'yes'}),
+            ('/set_include_community_scenarios', {'include': True}),
+        ]
+        for url, body in requests:
+            response = self.client.post(url, data=json.dumps(body) if body else None,
+                                        content_type='application/json')
+            # Same as the other protected routes: Flask-Login redirects to the login page
+            self.assertEqual(response.status_code, 302, url)
+        self.assertEqual(GameState.query.count(), 0)
 
 
 if __name__ == '__main__':

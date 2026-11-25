@@ -65,6 +65,7 @@ def set_mode():
         return jsonify({"error": str(e)}), 500
 
 @settings_bp.route('/set_include_community_scenarios', methods=['POST'])
+@login_required
 def set_include_community_scenarios():
     """Toggle inclusion of community-created scenarios"""
     from app import get_game

@@ -33,6 +33,7 @@ def reset_game():
         return jsonify({"error": str(e)}), 500
 
 @game_bp.route('/next_turn', methods=['POST'])
+@login_required
 def next_turn():
     """Process next game turn and return new scenario"""
     from app import get_game
@@ -77,6 +78,7 @@ def next_turn():
         return jsonify({"error": "An unexpected error occurred"}), 500
 
 @game_bp.route('/handle_scenario', methods=['POST'])
+@login_required
 def handle_scenario():
     """Handle user's response to a scenario"""
     from app import get_game

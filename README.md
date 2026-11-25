@@ -251,7 +251,7 @@ Exact dependency pins are in `requirements.txt`.
 
 ### Game State Persistence
 
-Serverless instances do not share memory, so each player's in-progress game is stored in the `game_state` table, keyed `user_<id>` (or `temp_<session id>` for unauthenticated sessions):
+Serverless instances do not share memory, so each player's in-progress game is stored in the `game_state` table, keyed `user_<id>`:
 
 - `get_game()` in `app.py` rebuilds the game with `developmentGame.from_state()` once per request and caches it on `flask.g`.
 - An `after_request` hook saves `to_state()` back to the database.
@@ -303,6 +303,8 @@ Decision scenarios also carry a `response` JSON object with `yes` and `no` messa
 | `routes/settings.py` | `/set_difficulty`, `/set_mode`, `/set_include_community_scenarios` |
 | `routes/data.py` | `/get_user_info`, `/get_leaderboard`, `/get_modes`, `/get_mode_metrics` |
 | `routes/scenarios.py` | `/create_scenario` |
+
+Everything except `/`, `/login`, `/check_auth`, `/login/google` and `/authorize` requires a signed-in user; Flask-Login redirects other requests to `/`.
 
 ## Database Schema
 

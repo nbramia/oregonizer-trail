@@ -81,16 +81,18 @@ def handle_scenario():
     """Handle user's response to a scenario"""
     from app import get_game
     try:
-        data = request.get_json()
-        scenario_id = data['scenario']
-        action = data['action']
+        data = request.get_json(silent=True) or {}
+        scenario_id = data.get('scenario')
+        action = data.get('action')
+        if action not in ('yes', 'no'):
+            return jsonify({"error": "action must be 'yes' or 'no'"}), 400
         logging.debug(f"Handling scenario: {scenario_id} with action: {action}")
 
         # Retrieve the scenario from the database using the ID
-        scenario = Scenario.query.get(scenario_id)
+        scenario = db.session.get(Scenario, scenario_id) if isinstance(scenario_id, int) else None
         if not scenario:
-            logging.error(f"Scenario {scenario_id} not found in the database")
-            return jsonify({"error": f"Scenario {scenario_id} not found in the database"}), 500
+            logging.warning(f"Scenario {scenario_id} not found in the database")
+            return jsonify({"error": f"Scenario {scenario_id} not found"}), 404
 
         response_text = get_game().handle_scenario(scenario.name, action)
         metrics = get_game().update_metrics()
@@ -164,23 +166,16 @@ def end_game():
         # Calculate Win bonus (binary: 100 if won, 0 if lost)
         win_bonus = 100 if won_game else 0
 
-        # Calculate Points score from all metrics (excluding tech_debt if present)
-        non_tech_metrics = [v for k, v in metrics_values.items() if k != 'tech_debt']
-        if non_tech_metrics:
-            total_points = sum(non_tech_metrics)
-            points_score = total_points / len(non_tech_metrics)
-        else:
-            total_points = 0
-            points_score = 0
-
         # Clamp metrics to 0-100 for score calculation
         for metric in metrics_values:
             metrics_values[metric] = max(min(metrics_values[metric], 100), 0)
 
-        # Recalculate total_points after clamping
+        # Points score: average of the mode's metrics other than tech_debt
+        # (tech_debt only ends the game at zero, like the thriving win condition)
         non_tech_metrics = [v for k, v in metrics_values.items() if k != 'tech_debt']
-        total_points = sum(non_tech_metrics) if non_tech_metrics else 0
-        points_score = total_points / 4
+        total_points = sum(non_tech_metrics)
+        max_points = 100 * len(non_tech_metrics)
+        points_score = (total_points / len(non_tech_metrics)) if non_tech_metrics else 0
 
         # Calculate overall score with weighted components:
         # - Difficulty: 40% weight (2x)
@@ -214,6 +209,7 @@ def end_game():
             "won_game": won_game,
             "win_bonus": win_bonus,
             "total_points": total_points,
+            "max_points": max_points,
             "points_score": points_score,
             "overall_score": overall_score
         }

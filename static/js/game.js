@@ -1172,7 +1172,7 @@
                 Turns: ${scores.turns_score.toFixed(0)}% (${scores.turns_survived}/25 turns)
                 <br>Win Bonus: ${scores.win_bonus.toFixed(0)}% (${scores.won_game ? 'Won' : 'Lost'})
                 <br>Difficulty: ${scores.difficulty_score}% (${scores.difficulty})
-                <br>Points: ${scores.points_score.toFixed(0)}% (${scores.total_points}/400)
+                <br>Points: ${scores.points_score.toFixed(0)}% (${scores.total_points}/${scores.max_points})
                 <br><br><strong>Final Score: ${scores.overall_score.toFixed(0)}%</strong>
             `;
             const scoreBreakdownElement = document.getElementById('scoreBreakdown');

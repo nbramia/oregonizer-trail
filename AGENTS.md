@@ -123,7 +123,8 @@ Each user's game is stored in the `game_state` table (keyed `user_<id>`), becaus
 - Env vars live in Vercel: DATABASE_URL(_UNPOOLED), SECRET_KEY, GOOGLE_CLIENT_ID/SECRET, GOOGLE_REDIRECT_URI
 - Google OAuth client: GCP project `oregonizer-trail` (nbramia@gmail.com). Redirect URI must match the deployed domain.
 - NEVER run tests with DATABASE_URL set to production: tests switch to SQLite only after import and would hit the real DB
-- 40 of 83 tests fail on main because they assume "Product Development" is the default mode (only "Movement Labs" is enabled in `mode_config.py`), so deploy.sh's test gate currently blocks
+- The full suite must pass before deploying (deploy.sh's gate). Engine tests pin a mode explicitly with `set_mode()`, so enabling or disabling modes in `mode_config.py` doesn't break them; route tests use the default mode
+- Metric state lives only in `developmentGame.metrics` (a dict keyed by the mode's metric names); there are no per-metric attributes
 
 ## Working with Nathan's Preferences
 

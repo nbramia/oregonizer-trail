@@ -198,13 +198,13 @@ Scores are calculated in `routes/game.py` when a game ends.
 | Difficulty score | Normal 50, Hard 75, Crazy 100 |
 | Turns score | `min(turns_survived / 25 * 100, 100)` |
 | Win bonus | 100 if the game was won, otherwise 0 |
-| Points score | Sum of the final non-tech-debt metrics (each clamped to 0-100), divided by 4 |
+| Points score | Average of the final metrics other than tech debt, each clamped to 0-100 |
 
 ```python
 overall_score = (2 * difficulty_score + turns_score + win_bonus + points_score) / 5
 ```
 
-Difficulty carries a 40% weight; turns, win bonus, and points carry 20% each.
+Difficulty carries a 40% weight; turns, win bonus, and points carry 20% each. A won 25-turn game on Crazy with every non-tech-debt metric at 100 scores 100. Tech debt ends the game at zero but doesn't count toward points.
 
 ## Tech Stack
 
@@ -260,7 +260,7 @@ Serverless instances do not share memory, so each player's in-progress game is s
 
 ### Scenario Storage
 
-Scenarios live in the `scenario` table, not in code. `populate_scenarios.py` loads every `scenarios_*.csv` file, replacing all non-community scenarios and leaving community scenarios untouched. Metrics and responses are stored as JSON strings and decoded at runtime.
+Scenarios live in the `scenario` table, not in code. `populate_scenarios.py` loads every `scenarios_*.csv` file, replacing all non-community scenarios and leaving community scenarios untouched. It parses every file before touching the database and exits non-zero if anything fails, so a bad CSV can't empty a mode or let `deploy.sh` continue. Metrics and responses are stored as JSON strings and decoded at runtime.
 
 Decision scenario metrics:
 
@@ -402,7 +402,17 @@ python3 -m unittest discover -s . -p "test_*.py"
 
 Tests use an in-memory SQLite database. **Never run the tests with `DATABASE_URL` pointing at production**: the tests switch to SQLite only after `app` is imported, so they would write to the real database. Run them with `DATABASE_URL` unset (for example `env -u DATABASE_URL python3 -m unittest discover -s . -p "test_*.py"`).
 
-Many tests assume the Product Development mode is the default, but only Movement Labs is enabled, so a number of tests currently fail.
+What the suite covers:
+
+| File | Covers |
+|------|--------|
+| `test_game_logic.py` | The game engine: difficulty, tech-debt decay, scenario selection, metric changes, win/loss checks, in Product Development mode and in the default Movement Labs mode |
+| `test_game_end_scenarios.py` | Every combination of metrics hitting zero, and failure taking priority over wins |
+| `test_game_state.py` | Saving and restoring a game between requests, including after scenarios are reloaded |
+| `test_routes.py` | The HTTP endpoints: login, turns, choices, scoring, settings, scenario creation |
+| `test_models.py` | The `user` and `scenario` models |
+| `test_validation.py` | Input validators |
+| `test_scenario_data.py` | Every row in `scenarios_*.csv` parses and validates for its mode |
 
 Manual checks worth running after changes: sign in with Google, play each difficulty, confirm informational scenarios and win/loss messages, create a community scenario and toggle community scenarios, and confirm `games_started`, `games_played`, high score, and the leaderboard update.
 

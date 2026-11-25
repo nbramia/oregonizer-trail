@@ -1,11 +1,16 @@
 """
 Test suite for game logic (developmentGame class)
+
+The engine is mode-agnostic. Most tests run it in Product Development mode
+(partner metrics drive tech-debt decay); TestMovementLabsGame covers the
+default, enabled mode.
 """
 import unittest
 import json
 from app import app, db
 from models import Scenario
 from game_logic import developmentGame
+from mode_config import get_default_mode, get_mode_metrics
 
 
 class TestGameLogic(unittest.TestCase):
@@ -25,6 +30,7 @@ class TestGameLogic(unittest.TestCase):
         self.app_context.push()
 
         self.game = developmentGame()
+        self.game.set_mode('Product Development')
 
     def tearDown(self):
         """Clean up after each test"""
@@ -110,14 +116,15 @@ class TestGameLogic(unittest.TestCase):
 
     def test_game_initialization(self):
         """Test game initializes with correct default values"""
+        self.assertEqual(developmentGame().mode, get_default_mode())
         self.assertEqual(self.game.difficulty, "Normal")
         self.assertEqual(self.game.mode, "Product Development")
         self.assertEqual(self.game.variation_range, (0.8, 1.25))
         self.assertFalse(self.game.include_community_scenarios)
-        self.assertEqual(self.game.staff_retention, 100)
-        self.assertEqual(self.game.partner_growth, 100)
-        self.assertEqual(self.game.partner_retention, 100)
-        self.assertEqual(self.game.tech_debt, 100)
+        self.assertEqual(self.game.metrics['staff_retention'], 100)
+        self.assertEqual(self.game.metrics['partner_growth'], 100)
+        self.assertEqual(self.game.metrics['partner_retention'], 100)
+        self.assertEqual(self.game.metrics['tech_debt'], 100)
         self.assertEqual(self.game.turns_survived, 0)
         self.assertEqual(self.game.status, "developing")
 
@@ -126,30 +133,30 @@ class TestGameLogic(unittest.TestCase):
         self.game.set_difficulty("Normal")
 
         self.assertEqual(self.game.variation_range, (0.8, 1.25))
-        self.assertEqual(self.game.staff_retention, 100)
-        self.assertEqual(self.game.partner_growth, 100)
-        self.assertEqual(self.game.partner_retention, 100)
-        self.assertEqual(self.game.tech_debt, 100)
+        self.assertEqual(self.game.metrics['staff_retention'], 100)
+        self.assertEqual(self.game.metrics['partner_growth'], 100)
+        self.assertEqual(self.game.metrics['partner_retention'], 100)
+        self.assertEqual(self.game.metrics['tech_debt'], 100)
 
     def test_set_difficulty_hard(self):
         """Test setting difficulty to Hard"""
         self.game.set_difficulty("Hard")
 
         self.assertEqual(self.game.variation_range, (1.0, 1.4))
-        self.assertEqual(self.game.staff_retention, 85)
-        self.assertEqual(self.game.partner_growth, 85)
-        self.assertEqual(self.game.partner_retention, 85)
-        self.assertEqual(self.game.tech_debt, 75)
+        self.assertEqual(self.game.metrics['staff_retention'], 85)
+        self.assertEqual(self.game.metrics['partner_growth'], 85)
+        self.assertEqual(self.game.metrics['partner_retention'], 85)
+        self.assertEqual(self.game.metrics['tech_debt'], 75)
 
     def test_set_difficulty_crazy(self):
         """Test setting difficulty to Crazy"""
         self.game.set_difficulty("Crazy")
 
         self.assertEqual(self.game.variation_range, (1.1, 1.6))
-        self.assertEqual(self.game.staff_retention, 75)
-        self.assertEqual(self.game.partner_growth, 75)
-        self.assertEqual(self.game.partner_retention, 75)
-        self.assertEqual(self.game.tech_debt, 50)
+        self.assertEqual(self.game.metrics['staff_retention'], 75)
+        self.assertEqual(self.game.metrics['partner_growth'], 75)
+        self.assertEqual(self.game.metrics['partner_retention'], 75)
+        self.assertEqual(self.game.metrics['tech_debt'], 50)
 
     def test_set_mode(self):
         """Test setting game mode"""
@@ -164,13 +171,13 @@ class TestGameLogic(unittest.TestCase):
     def test_reset_game(self):
         """Test game reset functionality"""
         # Change some values
-        self.game.staff_retention = 50
+        self.game.metrics['staff_retention'] = 50
         self.game.turns_survived = 10
         self.game.status = "failure"
 
         self.game.reset_game()
 
-        self.assertEqual(self.game.staff_retention, 100)
+        self.assertEqual(self.game.metrics['staff_retention'], 100)
         self.assertEqual(self.game.turns_survived, 0)
         self.assertEqual(self.game.status, "developing")
         self.assertIsNone(self.game.current_scenario)
@@ -186,43 +193,53 @@ class TestGameLogic(unittest.TestCase):
 
     def test_tech_debt_adjustment(self):
         """Test tech debt auto-decay calculation"""
-        self.game.partner_growth = 120
-        self.game.partner_retention = 80
-        self.game.tech_debt = 100
+        self.game.metrics['partner_growth'] = 70
+        self.game.metrics['partner_retention'] = 80
+        self.game.metrics['tech_debt'] = 100
 
         self.game.adjust_for_tech_debt()
 
-        # debt_factor = round((120 + 80) / 200) = round(1.0) = 1
+        # debt_factor = round((70 + 80) / 200) = round(0.75) = 1
         # new_tech_debt = max(0, 100 - 1) = 99
-        self.assertEqual(self.game.tech_debt, 99)
+        self.assertEqual(self.game.metrics['tech_debt'], 99)
 
     def test_tech_debt_adjustment_high_partner_metrics(self):
-        """Test tech debt decay with high partner metrics"""
-        self.game.partner_growth = 200
-        self.game.partner_retention = 200
-        self.game.tech_debt = 100
+        """Test tech debt decay with partner metrics at their 100 cap"""
+        self.game.metrics['partner_growth'] = 100
+        self.game.metrics['partner_retention'] = 100
+        self.game.metrics['tech_debt'] = 100
 
         self.game.adjust_for_tech_debt()
 
-        # debt_factor = round((200 + 200) / 200) = round(2.0) = 2
-        # new_tech_debt = max(0, 100 - 2) = 98
-        self.assertEqual(self.game.tech_debt, 98)
+        # debt_factor = round((100 + 100) / 200) = 1
+        self.assertEqual(self.game.metrics['tech_debt'], 99)
+
+    def test_tech_debt_adjustment_low_partner_metrics(self):
+        """Test tech debt does not decay when partner metrics are low"""
+        self.game.metrics['partner_growth'] = 20
+        self.game.metrics['partner_retention'] = 20
+        self.game.metrics['tech_debt'] = 100
+
+        self.game.adjust_for_tech_debt()
+
+        # debt_factor = round(40 / 200) = 0
+        self.assertEqual(self.game.metrics['tech_debt'], 100)
 
     def test_tech_debt_adjustment_floor_zero(self):
         """Test tech debt doesn't go below zero"""
-        self.game.partner_growth = 200
-        self.game.partner_retention = 200
-        self.game.tech_debt = 1
+        self.game.metrics['partner_growth'] = 100
+        self.game.metrics['partner_retention'] = 100
+        self.game.metrics['tech_debt'] = 0
 
         self.game.adjust_for_tech_debt()
 
         # Would calculate to -1, but should floor at 0
-        self.assertEqual(self.game.tech_debt, 0)
+        self.assertEqual(self.game.metrics['tech_debt'], 0)
 
     def test_update_metrics(self):
         """Test metrics update returns correct data"""
         self.game.turns_survived = 5
-        self.game.staff_retention = 80
+        self.game.metrics['staff_retention'] = 80
 
         metrics = self.game.update_metrics()
 
@@ -234,16 +251,16 @@ class TestGameLogic(unittest.TestCase):
 
     def test_check_status_staff_retention_failure(self):
         """Test failure condition when staff retention reaches 0"""
-        self.game.staff_retention = 0
+        self.game.metrics['staff_retention'] = 0
 
         status = self.game.check_status()
 
         self.assertIn("Failure", status)
-        self.assertIn("quit", status)
+        self.assertIn("STAFF RETENTION", status)
 
     def test_check_status_partner_growth_failure(self):
         """Test failure condition when partner growth reaches 0"""
-        self.game.partner_growth = 0
+        self.game.metrics['partner_growth'] = 0
 
         status = self.game.check_status()
 
@@ -252,7 +269,7 @@ class TestGameLogic(unittest.TestCase):
 
     def test_check_status_partner_retention_failure(self):
         """Test failure condition when partner retention reaches 0"""
-        self.game.partner_retention = 0
+        self.game.metrics['partner_retention'] = 0
 
         status = self.game.check_status()
 
@@ -261,20 +278,20 @@ class TestGameLogic(unittest.TestCase):
 
     def test_check_status_tech_debt_failure(self):
         """Test failure condition when tech debt reaches 0"""
-        self.game.tech_debt = 0
+        self.game.metrics['tech_debt'] = 0
 
         status = self.game.check_status()
 
         self.assertIn("Failure", status)
-        self.assertIn("debt", status)
+        self.assertIn("TECH DEBT", status)
 
     def test_check_status_survival_win(self):
         """Test win condition by surviving 25 turns"""
         self.game.turns_survived = 25
-        self.game.staff_retention = 50
-        self.game.partner_growth = 50
-        self.game.partner_retention = 50
-        self.game.tech_debt = 50
+        self.game.metrics['staff_retention'] = 50
+        self.game.metrics['partner_growth'] = 50
+        self.game.metrics['partner_retention'] = 50
+        self.game.metrics['tech_debt'] = 50
 
         status = self.game.check_status()
 
@@ -282,25 +299,31 @@ class TestGameLogic(unittest.TestCase):
         self.assertIn("25 turns", status)
 
     def test_check_status_thriving_win(self):
-        """Test win condition by thriving (all metrics > 100 after turn 10)"""
+        """Test win condition by thriving (all non-tech metrics at 100 after turn 10)"""
         self.game.turns_survived = 12
-        self.game.staff_retention = 110
-        self.game.partner_growth = 105
-        self.game.partner_retention = 115
-        self.game.tech_debt = 50  # Tech debt doesn't need to be > 100
+        self.game.metrics['staff_retention'] = 100
+        self.game.metrics['partner_growth'] = 100
+        self.game.metrics['partner_retention'] = 100
+        self.game.metrics['tech_debt'] = 50  # Tech debt doesn't need to be at 100
 
         status = self.game.check_status()
 
         self.assertIn("Congratulations", status)
         self.assertIn("thriving", status)
 
+    def test_check_status_no_thriving_before_turn_10(self):
+        """Thriving needs at least 10 turns"""
+        self.game.turns_survived = 9
+
+        self.assertIsNone(self.game.check_status())
+
     def test_check_status_no_message(self):
         """Test no status message during normal gameplay"""
         self.game.turns_survived = 5
-        self.game.staff_retention = 80
-        self.game.partner_growth = 80
-        self.game.partner_retention = 80
-        self.game.tech_debt = 80
+        self.game.metrics['staff_retention'] = 80
+        self.game.metrics['partner_growth'] = 80
+        self.game.metrics['partner_retention'] = 80
+        self.game.metrics['tech_debt'] = 80
 
         status = self.game.check_status()
 
@@ -372,15 +395,15 @@ class TestGameLogic(unittest.TestCase):
 
     def test_next_turn_adjusts_tech_debt(self):
         """Test that next_turn calls tech debt adjustment"""
-        self.game.partner_growth = 100
-        self.game.partner_retention = 100
-        self.game.tech_debt = 100
+        self.game.metrics['partner_growth'] = 100
+        self.game.metrics['partner_retention'] = 100
+        self.game.metrics['tech_debt'] = 100
 
         # Call adjust_for_tech_debt directly to test the logic
         self.game.adjust_for_tech_debt()
 
         # Should have decreased by 1 (round(200/200) = 1)
-        self.assertEqual(self.game.tech_debt, 99)
+        self.assertEqual(self.game.metrics['tech_debt'], 99)
 
     def test_next_turn_returns_messages_and_status(self):
         """Test that next_turn returns messages and status"""
@@ -394,24 +417,25 @@ class TestGameLogic(unittest.TestCase):
         """Test handling a decision scenario with 'yes' action"""
         scenario = Scenario.query.filter_by(name='test_decision').first()
 
-        initial_staff = self.game.staff_retention
+        initial_staff = self.game.metrics['staff_retention']
 
         response = self.game.handle_scenario('test_decision', 'yes')
 
         self.assertEqual(response, "You chose yes.")
         # Staff retention should have changed (with variation)
-        self.assertNotEqual(self.game.staff_retention, initial_staff)
+        self.assertNotEqual(self.game.metrics['staff_retention'], initial_staff)
 
     def test_handle_scenario_decision_no(self):
         """Test handling a decision scenario with 'no' action"""
         scenario = Scenario.query.filter_by(name='test_decision').first()
+        self.game.metrics['staff_retention'] = 50
 
-        initial_staff = self.game.staff_retention
+        initial_staff = self.game.metrics['staff_retention']
 
         response = self.game.handle_scenario('test_decision', 'no')
 
         self.assertEqual(response, "You chose no.")
-        self.assertNotEqual(self.game.staff_retention, initial_staff)
+        self.assertNotEqual(self.game.metrics['staff_retention'], initial_staff)
 
     def test_handle_scenario_nonexistent_scenario(self):
         """Test handling a scenario that doesn't exist"""
@@ -420,39 +444,134 @@ class TestGameLogic(unittest.TestCase):
 
     def test_apply_metric_change_staff_retention(self):
         """Test applying metric change to staff retention"""
-        initial = self.game.staff_retention
+        self.game.metrics['staff_retention'] = 50
+        initial = self.game.metrics['staff_retention']
 
         self.game.apply_metric_change('staff_retention', 20)
 
         # Should be increased by approximately 20 (with variation)
-        self.assertGreater(self.game.staff_retention, initial)
+        self.assertGreater(self.game.metrics['staff_retention'], initial)
 
     def test_apply_metric_change_partner_growth(self):
         """Test applying metric change to partner growth"""
-        initial = self.game.partner_growth
+        initial = self.game.metrics['partner_growth']
 
         self.game.apply_metric_change('partner_growth', -15)
 
         # Should be decreased by approximately 15 (with variation)
-        self.assertLess(self.game.partner_growth, initial)
+        self.assertLess(self.game.metrics['partner_growth'], initial)
 
     def test_apply_metric_change_partner_retention(self):
         """Test applying metric change to partner retention"""
-        initial = self.game.partner_retention
+        self.game.metrics['partner_retention'] = 50
+        initial = self.game.metrics['partner_retention']
 
         self.game.apply_metric_change('partner_retention', 10)
 
         # Should be increased by approximately 10 (with variation)
-        self.assertGreater(self.game.partner_retention, initial)
+        self.assertGreater(self.game.metrics['partner_retention'], initial)
 
     def test_apply_metric_change_tech_debt(self):
         """Test applying metric change to tech debt"""
-        initial = self.game.tech_debt
+        self.game.metrics['tech_debt'] = 50
+        initial = self.game.metrics['tech_debt']
 
         self.game.apply_metric_change('tech_debt', 25)
 
         # Should be increased by approximately 25 (with variation)
-        self.assertGreater(self.game.tech_debt, initial)
+        self.assertGreater(self.game.metrics['tech_debt'], initial)
+
+    def test_apply_metric_change_clamps_to_range(self):
+        """Metric changes are clamped to 0-100"""
+        self.game.apply_metric_change('staff_retention', 50)
+        self.assertEqual(self.game.metrics['staff_retention'], 100)
+
+        self.game.metrics['staff_retention'] = 50
+        self.game.apply_metric_change('staff_retention', -100)
+        self.assertEqual(self.game.metrics['staff_retention'], 0)
+
+    def test_apply_metric_change_ignores_other_modes_metrics(self):
+        """A metric the current mode doesn't track is ignored"""
+        before = dict(self.game.metrics)
+
+        self.game.apply_metric_change('revenue', 10)
+
+        self.assertEqual(self.game.metrics, before)
+
+    def test_get_scenario_never_informational_on_turn_1(self):
+        """Turn 1 always shows a decision scenario"""
+        self.game.turns_survived = 1
+        for _ in range(20):
+            self.game.last_scenario_was_informational = False
+            self.assertEqual(self.game.get_scenario().type, 'decision')
+
+    def test_get_scenario_never_informational_twice_in_a_row(self):
+        """An informational scenario is never followed by another"""
+        self.game.turns_survived = 5
+        for _ in range(20):
+            self.game.last_scenario_was_informational = True
+            self.assertEqual(self.game.get_scenario().type, 'decision')
+
+    def test_get_scenario_with_no_scenarios_returns_none(self):
+        """A mode with no scenarios yields no scenario instead of crashing"""
+        self.game.set_mode('Movement Labs')  # nothing seeded for this mode
+
+        self.assertIsNone(self.game.get_scenario())
+        messages, status = self.game.next_turn()
+        self.assertEqual(messages, [])
+
+    def test_get_scenario_falls_back_to_informational(self):
+        """With only informational scenarios, turns still get one"""
+        Scenario.query.filter_by(type='decision').delete()
+        db.session.commit()
+        self.game.setup_scenarios()
+
+        scenario = self.game.get_scenario()
+
+        self.assertEqual(scenario.type, 'informational')
+
+
+class TestMovementLabsGame(unittest.TestCase):
+    """The default mode, with its own metrics and tech-debt rule"""
+
+    def setUp(self):
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+        app.config['TESTING'] = True
+        self.app_context = app.app_context()
+        self.app_context.push()
+        db.create_all()
+        db.session.add(Scenario(
+            name='ml_decision', mode='Movement Labs', type='decision', text='ML decision',
+            metrics=json.dumps({"yes": {"revenue": 10}, "no": {"net_votes": -10}}),
+            response=json.dumps({"yes": "Y", "no": "N"}), community=False))
+        db.session.commit()
+        self.game = developmentGame()
+
+    def tearDown(self):
+        db.session.remove()
+        db.drop_all()
+        self.app_context.pop()
+
+    def test_default_mode_metrics(self):
+        self.assertEqual(self.game.mode, 'Movement Labs')
+        self.assertEqual(list(self.game.metrics), get_mode_metrics('Movement Labs'))
+        self.assertTrue(all(v == 100 for v in self.game.metrics.values()))
+
+    def test_tech_debt_decay_uses_revenue_and_net_votes(self):
+        self.game.metrics.update(revenue=100, net_votes=100, tech_debt=50)
+        self.game.adjust_for_tech_debt()
+        self.assertEqual(self.game.metrics['tech_debt'], 49)
+
+    def test_failure_messages(self):
+        self.game.metrics.update(revenue=0, net_votes=0)
+        status = self.game.check_status()
+        self.assertIn("REVENUE", status)
+        self.assertIn("NET VOTES", status)
+        self.assertIn("Multiple critical issues", status)
+
+    def test_next_turn_serves_mode_scenarios(self):
+        messages, _ = self.game.next_turn()
+        self.assertEqual(messages, ['ML decision'])
 
 
 if __name__ == '__main__':

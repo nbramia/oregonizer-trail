@@ -12,6 +12,11 @@ class ValidationError(Exception):
     pass
 
 
+def _is_number(value):
+    """int or float, but not bool (which Python treats as an int)"""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def validate_difficulty(difficulty):
     """Validate difficulty value"""
     valid_difficulties = ['Normal', 'Hard', 'Crazy']
@@ -22,7 +27,7 @@ def validate_difficulty(difficulty):
 
 def validate_turns_survived(turns):
     """Validate turns_survived value"""
-    if not isinstance(turns, int) or turns < 0:
+    if not isinstance(turns, int) or isinstance(turns, bool) or turns < 0:
         raise ValidationError(f"Invalid turns_survived: {turns}. Must be a non-negative integer")
     if turns > 1000:  # Reasonable upper bound
         raise ValidationError(f"Invalid turns_survived: {turns}. Value too large")
@@ -31,7 +36,7 @@ def validate_turns_survived(turns):
 
 def validate_metric_value(value, metric_name):
     """Validate metric value (0-200 range)"""
-    if not isinstance(value, (int, float)):
+    if not _is_number(value):
         raise ValidationError(f"Invalid {metric_name}: {value}. Must be a number")
     if value < 0 or value > 200:
         raise ValidationError(f"Invalid {metric_name}: {value}. Must be between 0 and 200")
@@ -101,7 +106,7 @@ def validate_scenario_metrics(metrics, scenario_type, mode):
             for metric_key, value in metrics_dict[action].items():
                 if metric_key not in valid_metrics:
                     raise ValidationError(f"Invalid metric '{metric_key}' for mode '{mode}'")
-                if not isinstance(value, (int, float)):
+                if not _is_number(value):
                     raise ValidationError(f"Metric value for '{metric_key}' must be a number")
                 if value < -100 or value > 100:
                     raise ValidationError(f"Metric value for '{metric_key}' must be between -100 and 100")
@@ -114,7 +119,7 @@ def validate_scenario_metrics(metrics, scenario_type, mode):
         for metric_key, value in metrics_dict.items():
             if metric_key not in valid_metrics:
                 raise ValidationError(f"Invalid metric '{metric_key}' for mode '{mode}'")
-            if not isinstance(value, (int, float)):
+            if not _is_number(value):
                 raise ValidationError(f"Metric value for '{metric_key}' must be a number")
             if value < -100 or value > 100:
                 raise ValidationError(f"Metric value for '{metric_key}' must be between -100 and 100")

@@ -2,14 +2,12 @@ import json
 import csv
 import glob
 import os
+import sys
 from flask import Flask
 from models import db, Scenario
 from config import Config
 
-app = Flask(__name__)
-app.config.from_object(Config)
-
-db.init_app(app)
+SCENARIO_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def load_scenarios_from_csv(csv_path):
@@ -72,58 +70,69 @@ def load_scenarios_from_csv(csv_path):
 
 
 def load_all_mode_scenarios():
-    """Load scenarios from all mode-specific CSV files"""
+    """Load scenarios from every scenarios_*.csv file; a file that fails to parse raises"""
     all_scenarios = []
 
-    # Find all scenario CSV files matching the pattern scenarios_*.csv
-    csv_files = glob.glob('scenarios_*.csv')
+    csv_files = sorted(glob.glob(os.path.join(SCENARIO_DIR, 'scenarios_*.csv')))
 
     if not csv_files:
         print("Warning: No scenario CSV files found matching pattern 'scenarios_*.csv'")
         return all_scenarios
 
     print(f"Found {len(csv_files)} mode-specific CSV file(s):")
-    for csv_file in sorted(csv_files):
-        print(f"  - {csv_file}")
-        try:
-            scenarios = load_scenarios_from_csv(csv_file)
-            all_scenarios.extend(scenarios)
-            print(f"    Loaded {len(scenarios)} scenarios")
-        except Exception as e:
-            print(f"    Error loading {csv_file}: {e}")
+    for csv_file in csv_files:
+        print(f"  - {os.path.basename(csv_file)}")
+        scenarios = load_scenarios_from_csv(csv_file)
+        all_scenarios.extend(scenarios)
+        print(f"    Loaded {len(scenarios)} scenarios")
 
     return all_scenarios
 
 
-with app.app_context():
-    try:
-        # Load scenarios from all mode-specific CSV files
-        scenarios = load_all_mode_scenarios()
+def main():
+    """Replace the non-community scenarios in DATABASE_URL with the CSV contents"""
+    from dotenv import load_dotenv
+    load_dotenv()
 
-        if not scenarios:
-            print("Warning: No scenarios loaded. Database will be cleared but not repopulated.")
+    app = Flask(__name__)
+    app.config.from_object(Config)
+    database_url = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url.replace("postgres://", "postgresql://")
+    db.init_app(app)
 
-        # Clear only non-community scenarios (preserve user-submitted scenarios)
-        print("\nClearing existing CSV scenarios from database...")
-        deleted_count = Scenario.query.filter_by(community=False).delete()
-        print(f"Deleted {deleted_count} existing CSV scenarios")
+    # Parse every file before touching the database
+    scenarios = load_all_mode_scenarios()
+    if not scenarios:
+        print("No scenarios loaded; leaving the database unchanged.")
+        return 1
 
-        # Add scenarios to database
-        print(f"\nAdding {len(scenarios)} scenarios from CSV files...")
-        for scenario_data in scenarios:
-            scenario = Scenario(
-                name=scenario_data["name"],
-                mode=scenario_data["mode"],
-                type=scenario_data["type"],
-                text=scenario_data["text"],
-                metrics=scenario_data["metrics"],
-                response=scenario_data.get("response", None),
-                community=False  # CSV scenarios are not community-submitted
-            )
-            db.session.add(scenario)
+    with app.app_context():
+        try:
+            # Clear only non-community scenarios (preserve user-submitted scenarios)
+            print("\nClearing existing CSV scenarios from database...")
+            deleted_count = Scenario.query.filter_by(community=False).delete()
+            print(f"Deleted {deleted_count} existing CSV scenarios")
 
-        db.session.commit()
-        print(f"✓ Database populated with {len(scenarios)} scenarios from CSV files.")
-    except Exception as e:
-        print(f"Error populating database: {e}")
-        db.session.rollback()
+            print(f"\nAdding {len(scenarios)} scenarios from CSV files...")
+            for scenario_data in scenarios:
+                db.session.add(Scenario(
+                    name=scenario_data["name"],
+                    mode=scenario_data["mode"],
+                    type=scenario_data["type"],
+                    text=scenario_data["text"],
+                    metrics=scenario_data["metrics"],
+                    response=scenario_data.get("response", None),
+                    community=False  # CSV scenarios are not community-submitted
+                ))
+
+            db.session.commit()
+            print(f"✓ Database populated with {len(scenarios)} scenarios from CSV files.")
+            return 0
+        except Exception as e:
+            print(f"Error populating database: {e}")
+            db.session.rollback()
+            return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

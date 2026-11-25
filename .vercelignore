@@ -1,5 +1,15 @@
+# Only the app itself is deployed
 .venv
+venv
+.env
+.env.*
+!.env.example
 *.db
+*.dump
+*.dump.*
+*.bundle
+archive
+instance
 __pycache__
 .pytest_cache
-.env
+test_*.py

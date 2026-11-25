@@ -81,10 +81,6 @@ class developmentGame:
             else:
                 self.metrics[metric] = initial_value
 
-        # Also set as attributes for backwards compatibility
-        for metric, value in self.metrics.items():
-            setattr(self, metric, value)
-
     def set_difficulty(self, difficulty):
         logging.debug(f"Setting difficulty to {difficulty}")
         self.difficulty = difficulty
@@ -172,7 +168,6 @@ class developmentGame:
 
         old_tech_debt = self.metrics['tech_debt']
         self.metrics['tech_debt'] = max(0, self.metrics['tech_debt'] - debt_factor)
-        self.tech_debt = self.metrics['tech_debt']  # Update attribute for backwards compatibility
         logging.debug(f"Adjusted for tech debt: old_tech_debt={old_tech_debt}, debt_factor={debt_factor}, new_tech_debt={self.metrics['tech_debt']}")
 
     def next_turn(self):
@@ -199,6 +194,9 @@ class developmentGame:
     def get_scenario(self):
         if not self.decision_scenarios_queue and not self.informational_scenarios_queue:
             self.setup_scenarios()
+        if not self.decision_scenarios_queue and self.decision_scenarios:
+            self.decision_scenarios_queue = self.decision_scenarios[:]
+            random.shuffle(self.decision_scenarios_queue)
 
         # Determine if we should show informational scenario
         # Rules: Never on turn 1, never twice in a row, 20% probability otherwise
@@ -208,6 +206,13 @@ class developmentGame:
             self.informational_scenarios_queue and  # Queue not empty
             random.random() < 0.20  # 20% chance
         )
+
+        if not self.decision_scenarios_queue and not can_show_informational:
+            # No decision scenarios for this mode: fall back to informational, or nothing
+            can_show_informational = bool(self.informational_scenarios_queue)
+            if not can_show_informational:
+                self.current_scenario = None
+                return None
 
         if can_show_informational:
             # Show informational scenario
@@ -282,22 +287,23 @@ class developmentGame:
         if state["current_scenario"] is not None:
             all_ids.add(state["current_scenario"])
         by_id = {s.id: s for s in Scenario.query.filter(Scenario.id.in_(all_ids)).all()} if all_ids else {}
-        lookup = lambda id_list: [by_id[i] for i in id_list if i in by_id]
+        # Keep only rows that still match the deck they were saved in, in case
+        # IDs were reused after populate_scenarios.py reloaded the CSVs
+        def lookup(id_list, type_):
+            return [by_id[i] for i in id_list
+                    if i in by_id and by_id[i].type == type_ and by_id[i].mode == game.mode]
 
-        game.decision_scenarios = lookup(state["decision_scenarios"])
-        game.informational_scenarios = lookup(state["informational_scenarios"])
-        game.decision_scenarios_queue = lookup(state["decision_scenarios_queue"])
-        game.informational_scenarios_queue = lookup(state["informational_scenarios_queue"])
-        game.current_scenario = by_id.get(state["current_scenario"])
+        game.decision_scenarios = lookup(state["decision_scenarios"], 'decision')
+        game.informational_scenarios = lookup(state["informational_scenarios"], 'informational')
+        game.decision_scenarios_queue = lookup(state["decision_scenarios_queue"], 'decision')
+        game.informational_scenarios_queue = lookup(state["informational_scenarios_queue"], 'informational')
+        current = by_id.get(state["current_scenario"])
+        game.current_scenario = current if current and current.mode == game.mode else None
 
         # Scenario IDs change when populate_scenarios.py reloads the CSVs;
         # rebuild the deck if the saved one no longer exists
         if not game.decision_scenarios:
             game.setup_scenarios()
-
-        # Also set as attributes for backwards compatibility
-        for metric, value in game.metrics.items():
-            setattr(game, metric, value)
         return game
 
     def apply_metric_change(self, metric, change):
@@ -305,7 +311,5 @@ class developmentGame:
             self.metrics[metric] += self.apply_variation(change)
             # Clamp metric to 0-100 range
             self.metrics[metric] = max(min(self.metrics[metric], 100), 0)
-            # Also update as attribute for backwards compatibility
-            setattr(self, metric, self.metrics[metric])
         else:
             logging.warning(f"Attempted to change metric '{metric}' which is not in current mode's metrics")

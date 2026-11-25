@@ -53,7 +53,7 @@ def set_mode():
         try:
             validate_mode(mode)
         except ValueError as e:
-            logging.error(f"Invalid mode: {e}")
+            logging.warning(f"Invalid mode: {e}")
             return jsonify({"error": str(e)}), 400
 
         get_game().set_mode(mode)
